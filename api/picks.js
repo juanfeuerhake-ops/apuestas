@@ -41,12 +41,16 @@ export default async function handler(req, res) {
     const prompt = buildPrompt(matches, data.updated);
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 2048,
+          },
         }),
       }
     );
@@ -90,41 +94,15 @@ export default async function handler(req, res) {
 }
 
 function buildPrompt(matches, updated) {
-  return `Eres un analista deportivo. Te paso una lista de próximos partidos del Mundial 2026 con contexto (fecha, sede, grupo, y notas sobre el nivel/forma de cada selección cuando esté disponible). Estos datos fueron actualizados el ${updated}.
+  return `Analista deportivo. Datos de partidos del Mundial 2026 (actualizado ${updated}).
 
-Para cada partido, propone 1-2 "picks" (mercados de apuesta) con:
-- market: nombre del mercado (ej "Doble oportunidad", "Over/Under goles", "Ambos anotan")
-- selection: la selección concreta del pick
-- odds_estimate: una cuota estimada razonable (string, ej "1.35") - deja claro que es una ESTIMACIÓN, no cuota real de casa de apuestas
-- confidence: número 15-92 (nunca 100, nunca menor a 15) que representa cuántas señales de contexto respaldan el pick
-- reasons: array de 2-4 strings, cada uno explicando una razón concreta basada en el contexto que tienes (jerarquía, experiencia mundialista, estilo de juego, etc.)
-- risk: un string explicando el principal riesgo/razón por la que el pick podría fallar
+Para cada partido da 1-2 picks con: market, selection, odds_estimate (string, estimación), confidence (15-92, nunca 100/menor 15), reasons (2-3 strings basados SOLO en home_form/away_form/notes dados), risk (string).
 
-Reglas:
-- Basa el razonamiento SOLO en la información de contexto proporcionada (home_form, away_form, notes). No inventes lesiones, alineaciones titulares ni estadísticas que no tengas.
-- Si para un partido home_form o away_form es null (rival aún por definir, ej. repechajes), dilo explícitamente y asigna confianza baja (15-30), o puedes omitir ese partido si no hay nada útil que decir.
-- Sé honesto: ningún pick es 100% seguro. Resultados de Mundial son impredecibles incluso con clara diferencia de jerarquía.
+Si home_form o away_form es null, confidence 15-30 y dilo en reasons. Sé breve y conciso en cada reason (máx 25 palabras).
 
 Partidos:
-${JSON.stringify(matches, null, 2)}
+${JSON.stringify(matches)}
 
-Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con esta forma exacta:
-{
-  "picks": [
-    {
-      "match": "Equipo A vs Equipo B",
-      "meta": "Fecha · Hora · Sede · Grupo",
-      "confidence": 65,
-      "selections": [
-        {
-          "market": "...",
-          "selection": "...",
-          "odds_estimate": "1.40"
-        }
-      ],
-      "reasons": ["...", "..."],
-      "risk": "..."
-    }
-  ]
-}`;
+Responde SOLO JSON:
+{"picks":[{"match":"A vs B","meta":"Fecha · Hora · Sede · Grupo","confidence":65,"selections":[{"market":"...","selection":"...","odds_estimate":"1.40"}],"reasons":["...","..."],"risk":"..."}]}`;
 }

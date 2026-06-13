@@ -8,7 +8,7 @@
 // 4. Claude devuelve un JSON con picks + razonamiento, en el mismo formato que el frontend espera.
 // 5. Devolvemos ese JSON al frontend.
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
  const SPORTS_API_KEY = process.env.SPORTS_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 

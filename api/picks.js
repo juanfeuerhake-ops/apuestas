@@ -2,139 +2,51 @@
 // Función serverless (Vercel). Se ejecuta en el servidor, nunca en el navegador.
 //
 // Flujo:
-// 1. Llama a API-Football para traer partidos de hoy y mañana (Mundial 2026, league id 1).
-// 2. Si no hay partidos hoy/mañana, busca los próximos disponibles en la temporada (fallback).
-// 3. Para cada partido, trae forma reciente de ambos equipos.
-// 4. Construye un prompt con todo eso y se lo manda a Gemini.
-// 5. Gemini devuelve un JSON con picks + razonamiento, en el mismo formato que el frontend espera.
-// 6. Devolvemos ese JSON al frontend.
+// 1. Lee fixtures.json (partidos próximos, actualizado manualmente cada 1-2 días).
+// 2. Construye un prompt con esos datos y se lo manda a Gemini.
+// 3. Gemini devuelve un JSON con picks + razonamiento, en el formato que el frontend espera.
+// 4. Devolvemos ese JSON al frontend.
+//
+// Para actualizar los partidos: edita /fixtures.json en el repo y haz commit.
+// No requiere ninguna API deportiva externa.
+
+import fs from "fs";
+import path from "path";
 
 export default async function handler(req, res) {
-  const SPORTS_API_KEY = process.env.SPORTS_API_KEY;
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-  if (!SPORTS_API_KEY || !GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return res.status(500).json({
-      error: "Faltan API keys en las variables de entorno (SPORTS_API_KEY / GEMINI_API_KEY)."
+      error: "Falta la variable de entorno GEMINI_API_KEY."
     });
   }
 
   try {
-    // ---------- 1. Traer partidos (hoy + mañana) ----------
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+    // ---------- 1. Leer fixtures.json ----------
+    const fixturesPath = path.join(process.cwd(), "fixtures.json");
+    const raw = fs.readFileSync(fixturesPath, "utf-8");
+    const data = JSON.parse(raw);
 
-    const fmt = (d) => d.toISOString().split("T")[0];
+    const matches = data.matches || [];
 
-    const fixturesRes = await Promise.all(
-      [today, tomorrow].map((d) =>
-        fetch(
-          `https://v3.football.api-sports.io/fixtures?date=${fmt(d)}&league=1&season=2026`,
-          {
-            headers: {
-              "x-apisports-key": SPORTS_API_KEY,
-            },
-          }
-        ).then((r) => r.json())
-      )
-    );
-
-    let fixtures = fixturesRes.flatMap((r) => r.response || []);
-
-    // ---------- 1b. Diagnóstico / fallback si no hay fixtures hoy/mañana ----------
-    if (fixtures.length === 0) {
-      // Probamos sin filtro de fecha para ver si la liga/temporada tiene datos en absoluto
-      const debugRes = await fetch(
-        `https://v3.football.api-sports.io/fixtures?league=1&season=2026`,
-        { headers: { "x-apisports-key": SPORTS_API_KEY } }
-      ).then((r) => r.json());
-
-      const seasonFixtures = debugRes.response || [];
-
-      // Fallback: si SÍ hay fixtures en la temporada pero ninguno cae hoy/mañana,
-      // tomamos los próximos partidos por fecha (los más cercanos a hoy).
-      if (seasonFixtures.length > 0) {
-        const now = today.getTime();
-        const upcoming = seasonFixtures
-          .filter((fx) => new Date(fx.fixture.date).getTime() >= now)
-          .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
-
-        fixtures = upcoming.slice(0, 8);
-      }
-
-      // Si sigue sin haber nada, devolvemos el diagnóstico completo para depurar
-      if (fixtures.length === 0) {
-        return res.status(200).json({
-          picks: [],
-          message: "No hay partidos programados para hoy/mañana.",
-          debug: {
-            dates_queried: [fmt(today), fmt(tomorrow)],
-            raw_responses_today_tomorrow: fixturesRes.map((r) => ({
-              results: r.results,
-              errors: r.errors,
-              paging: r.paging,
-            })),
-            season_total_fixtures: debugRes.results,
-            season_errors: debugRes.errors,
-            season_sample: seasonFixtures.slice(0, 2),
-          },
-        });
-      }
+    if (matches.length === 0) {
+      return res.status(200).json({
+        picks: [],
+        message: "No hay partidos cargados en fixtures.json."
+      });
     }
 
-    // Limitar a un número razonable para no gastar de más en la API de Gemini
-    const limited = fixtures.slice(0, 8);
-
-    // ---------- 2. Traer forma reciente de cada equipo ----------
-    const matchesData = await Promise.all(
-      limited.map(async (fx) => {
-        const homeId = fx.teams.home.id;
-        const awayId = fx.teams.away.id;
-
-        const [homeForm, awayForm] = await Promise.all(
-          [homeId, awayId].map((id) =>
-            fetch(
-              `https://v3.football.api-sports.io/fixtures?team=${id}&last=5`,
-              { headers: { "x-apisports-key": SPORTS_API_KEY } }
-            )
-              .then((r) => r.json())
-              .catch(() => ({ response: [] }))
-          )
-        );
-
-        return {
-          fixture_id: fx.fixture.id,
-          date: fx.fixture.date,
-          venue: fx.fixture.venue?.name || "",
-          home: fx.teams.home.name,
-          away: fx.teams.away.name,
-          home_last5: (homeForm.response || []).map(summarizeResult(homeId)),
-          away_last5: (awayForm.response || []).map(summarizeResult(awayId)),
-        };
-      })
-    );
-
-    // ---------- 3. Construir prompt para Gemini ----------
-    const prompt = buildPrompt(matchesData);
+    // ---------- 2. Construir prompt para Gemini ----------
+    const prompt = buildPrompt(matches, data.updated);
 
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
+          contents: [{ parts: [{ text: prompt }] }],
         }),
       }
     );
@@ -160,50 +72,29 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "No se pudo parsear la respuesta de Gemini", raw: text });
     }
 
-    return res.status(200).json({ picks });
+    return res.status(200).json({ picks, updated: data.updated });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 }
 
-// Resume un resultado pasado desde la perspectiva del equipo `teamId`
-function summarizeResult(teamId) {
-  return (fx) => {
-    const isHome = fx.teams.home.id === teamId;
-    const goalsFor = isHome ? fx.goals.home : fx.goals.away;
-    const goalsAgainst = isHome ? fx.goals.away : fx.goals.home;
-    const opponent = isHome ? fx.teams.away.name : fx.teams.home.name;
-
-    let result = "E";
-    if (goalsFor > goalsAgainst) result = "G";
-    if (goalsFor < goalsAgainst) result = "P";
-
-    return {
-      vs: opponent,
-      local: isHome,
-      resultado: result,
-      marcador: `${goalsFor}-${goalsAgainst}`,
-    };
-  };
-}
-
-function buildPrompt(matches) {
-  return `Eres un analista deportivo. Te paso datos reales de partidos del Mundial 2026 (próximos disponibles) con la forma reciente (últimos 5 partidos) de cada selección.
+function buildPrompt(matches, updated) {
+  return `Eres un analista deportivo. Te paso una lista de próximos partidos del Mundial 2026 con contexto (fecha, sede, grupo, y notas sobre el nivel/forma de cada selección cuando esté disponible). Estos datos fueron actualizados el ${updated}.
 
 Para cada partido, propone 1-2 "picks" (mercados de apuesta) con:
 - market: nombre del mercado (ej "Doble oportunidad", "Over/Under goles", "Ambos anotan")
 - selection: la selección concreta del pick
 - odds_estimate: una cuota estimada razonable (string, ej "1.35") - deja claro que es una ESTIMACIÓN, no cuota real de casa de apuestas
 - confidence: número 15-92 (nunca 100, nunca menor a 15) que representa cuántas señales de contexto respaldan el pick
-- reasons: array de 2-4 strings, cada uno explicando una razón concreta basada en los datos de forma reciente que tienes (ej "Ganó 4 de sus últimos 5 partidos como local")
+- reasons: array de 2-4 strings, cada uno explicando una razón concreta basada en el contexto que tienes (jerarquía, experiencia mundialista, estilo de juego, etc.)
 - risk: un string explicando el principal riesgo/razón por la que el pick podría fallar
 
 Reglas:
-- Basa el razonamiento SOLO en los datos de forma reciente proporcionados. No inventes lesiones, alineaciones ni datos que no tengas.
-- Si no hay suficiente data de forma (selecciones que no jugaron amistosos recientes), dilo en "reasons" y baja la confianza.
-- Sé honesto: ningún pick es 100% seguro.
+- Basa el razonamiento SOLO en la información de contexto proporcionada (home_form, away_form, notes). No inventes lesiones, alineaciones titulares ni estadísticas que no tengas.
+- Si para un partido home_form o away_form es null (rival aún por definir, ej. repechajes), dilo explícitamente y asigna confianza baja (15-30), o puedes omitir ese partido si no hay nada útil que decir.
+- Sé honesto: ningún pick es 100% seguro. Resultados de Mundial son impredecibles incluso con clara diferencia de jerarquía.
 
-Datos de los partidos:
+Partidos:
 ${JSON.stringify(matches, null, 2)}
 
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con esta forma exacta:
@@ -211,7 +102,7 @@ Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con esta forma ex
   "picks": [
     {
       "match": "Equipo A vs Equipo B",
-      "meta": "Fecha · Hora · Sede",
+      "meta": "Fecha · Hora · Sede · Grupo",
       "confidence": 65,
       "selections": [
         {

@@ -3,14 +3,44 @@
   "note": "Actualizar este archivo cada 1-2 días con los próximos partidos. Formato de 'form' es opcional: si se conoce la forma reciente real (últimos 5: V/E/D), incluirla; si no, dejar como null y la IA lo indicará como dato no disponible.",
   "matches": [
     {
-      "match": "Australia vs Ganador Repechaje Europeo C",
-      "date": "2026-06-14",
-      "time_mx": "00:00",
+      "match": "Qatar vs Suiza",
+      "date": "2026-06-13",
+      "time_mx": "13:00",
+      "venue": "Levi's Stadium, Santa Clara",
+      "group": "Grupo B",
+      "home_form": "Anfitrión de Qatar 2022, pero como selección de menor ranking dentro de este grupo en el sorteo.",
+      "away_form": "Selección europea consolidada, habitual en fases finales de Mundiales y Eurocopas.",
+      "notes": "Diferencia de nivel marcada a favor de Suiza."
+    },
+    {
+      "match": "Brasil vs Marruecos",
+      "date": "2026-06-13",
+      "time_mx": "16:00",
+      "venue": "MetLife Stadium, East Rutherford",
+      "group": "Grupo C",
+      "home_form": "Una de las selecciones favoritas del torneo, plantel con jugadores de élite mundial, suele atacar desde el inicio incluso con ventaja.",
+      "away_form": "Semifinalista en Qatar 2022, plantel con varios jugadores en clubes top de Europa, capaz de generar ocasiones ante cualquier rival.",
+      "notes": "Brasil favorito claro, pero Marruecos no es un equipo que se 'tape' 90 minutos sin crear nada."
+    },
+    {
+      "match": "Haití vs Escocia",
+      "date": "2026-06-13",
+      "time_mx": "19:00",
+      "venue": "Gillette Stadium, Foxborough",
+      "group": "Grupo C",
+      "home_form": "Debuta en su primer Mundial masculino, sin experiencia previa en esta instancia.",
+      "away_form": "Regresa al Mundial tras un proceso de clasificación europeo exigente, con jugadores en ligas top de Europa.",
+      "notes": "Escocia favorita por experiencia y profundidad de plantel; Haití puede jugar 'sin presión' como debutante."
+    },
+    {
+      "match": "Australia vs Türkiye",
+      "date": "2026-06-13",
+      "time_mx": "22:00",
       "venue": "BC Place, Vancouver",
       "group": "Grupo D",
-      "home_form": null,
-      "away_form": null,
-      "notes": "Rival aún por definir (repechaje europeo)."
+      "home_form": "Selección oceánica consolidada (clasificación directa, no repechaje en esta edición), estilo físico y disciplinado.",
+      "away_form": "Selección europea con generación de jugadores jóvenes de nivel en ligas top, en crecimiento en eliminatorias recientes.",
+      "notes": "Partido parejo entre dos selecciones de nivel medio-alto en su confederación."
     },
     {
       "match": "Alemania vs Curazao",
@@ -18,9 +48,9 @@
       "time_mx": "11:00",
       "venue": "NRG Stadium, Houston",
       "group": "Grupo E",
-      "home_form": "Selección europea consolidada, clasificación directa habitual a Mundiales.",
-      "away_form": "Curazao debuta en su primer Mundial, clasificación histórica vía Concacaf.",
-      "notes": "Gran diferencia de jerarquía y experiencia mundialista."
+      "home_form": "Selección europea consolidada, clasificación directa habitual a Mundiales, candidata histórica.",
+      "away_form": "Debuta en su primer Mundial, clasificación histórica vía Concacaf, gran logro para una selección pequeña.",
+      "notes": "Gran diferencia de jerarquía y experiencia mundialista a favor de Alemania."
     },
     {
       "match": "Países Bajos vs Japón",
@@ -28,9 +58,9 @@
       "time_mx": "14:00",
       "venue": "AT&T Stadium, Arlington",
       "group": "Grupo F",
-      "home_form": "Selección europea de alto nivel, habitual en rondas avanzadas.",
-      "away_form": "Selección asiática sólida, con buen desempeño en mundiales recientes (octavos en 2022).",
-      "notes": "Ambos equipos con estilo ofensivo y de posesión."
+      "home_form": "Selección europea de alto nivel, habitual en rondas avanzadas, juego ofensivo de posesión.",
+      "away_form": "Selección asiática sólida, con buen desempeño en mundiales recientes (octavos en 2022), también de estilo ofensivo.",
+      "notes": "Ambos equipos con estilo ofensivo y de posesión — partido con potencial de muchos goles."
     },
     {
       "match": "Costa de Marfil vs Ecuador",
@@ -39,68 +69,8 @@
       "venue": "Lincoln Financial Field, Philadelphia",
       "group": "Grupo E",
       "home_form": "Campeón de la Copa Africana de Naciones reciente, plantel con jugadores en ligas top europeas.",
-      "away_form": "Selección sudamericana de zona media-alta, clasificación sólida en eliminatorias.",
+      "away_form": "Selección sudamericana de zona media-alta, clasificación sólida en eliminatorias, defensa ordenada.",
       "notes": "Partido parejo entre selecciones con jugadores de buen nivel individual."
-    },
-    {
-      "match": "Túnez vs Ganador Repechaje Europeo B",
-      "date": "2026-06-14",
-      "time_mx": "20:00",
-      "venue": "Estadio BBVA, Guadalupe",
-      "group": "Grupo F",
-      "home_form": "Selección africana habitual en Mundiales, suele jugar ordenado defensivamente.",
-      "away_form": null,
-      "notes": "Rival aún por definir (repechaje europeo)."
-    },
-    {
-      "match": "España vs Cabo Verde",
-      "date": "2026-06-15",
-      "time_mx": "10:00",
-      "venue": "Mercedes-Benz Stadium, Atlanta",
-      "group": "Grupo H",
-      "home_form": "Una de las selecciones favoritas del torneo, campeona de la Eurocopa reciente, plantel de elite mundial.",
-      "away_form": "Cabo Verde debuta en su primer Mundial, clasificación histórica vía zona africana.",
-      "notes": "Diferencia de nivel muy marcada a favor de España."
-    },
-    {
-      "match": "Bélgica vs Egipto",
-      "date": "2026-06-15",
-      "time_mx": "13:00",
-      "venue": "Lumen Field, Seattle",
-      "group": "Grupo G",
-      "home_form": "Selección europea con generación de jugadores de nivel top europeo.",
-      "away_form": "Selección africana con presencia de jugadores en ligas europeas, suele competir bien físicamente.",
-      "notes": "Bélgica favorita pero Egipto puede generar ocasiones de gol."
-    },
-    {
-      "match": "Arabia Saudita vs Uruguay",
-      "date": "2026-06-15",
-      "time_mx": "16:00",
-      "venue": "Hard Rock Stadium, Miami",
-      "group": "Grupo H",
-      "home_form": "Selección de menor ranking del grupo, ya dio sorpresas en Mundiales pasados (venció a Argentina en 2022).",
-      "away_form": "Tradición mundialista sudamericana, base defensiva ordenada.",
-      "notes": "Uruguay favorito, pero Arabia Saudita tiene antecedente de sorpresa ante sudamericanos."
-    },
-    {
-      "match": "Irán vs Nueva Zelanda",
-      "date": "2026-06-15",
-      "time_mx": "19:00",
-      "venue": "SoFi Stadium, Inglewood",
-      "group": "Grupo G",
-      "home_form": "Clasificación vía zona asiática, suele plantear partidos cerrados y disciplinados.",
-      "away_form": "Clasificación vía repechaje oceánico, camino históricamente menos competitivo.",
-      "notes": "Irán favorito por disciplina táctica; Nueva Zelanda sin techo conocido en este formato."
-    },
-    {
-      "match": "Francia vs Senegal",
-      "date": "2026-06-15",
-      "time_mx": "13:00",
-      "venue": "MetLife Stadium, East Rutherford",
-      "group": "Grupo I",
-      "home_form": "Subcampeona/finalista habitual en Mundiales recientes, plantel de máximo nivel mundial.",
-      "away_form": "Selección africana de buen nivel, con jugadores en ligas top europeas.",
-      "notes": "Francia clara favorita por jerarquía individual y de equipo."
     }
   ]
 }

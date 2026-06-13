@@ -8,15 +8,14 @@
 // 4. Claude devuelve un JSON con picks + razonamiento, en el mismo formato que el frontend espera.
 // 5. Devolvemos ese JSON al frontend.
 
-export default async function handler(req, res) {
-  const SPORTS_API_KEY = process.env.SPORTS_API_KEY;
-  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const SPORTS_API_KEY = process.env.SPORTS_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-  if (!SPORTS_API_KEY || !ANTHROPIC_API_KEY) {
-    return res.status(500).json({
-      error: "Faltan API keys en las variables de entorno (SPORTS_API_KEY / ANTHROPIC_API_KEY)."
-    });
-  }
+if (!SPORTS_API_KEY || !GEMINI_API_KEY) {
+  return res.status(500).json({
+    error: "Faltan API keys en las variables de entorno (SPORTS_API_KEY / GEMINI_API_KEY)."
+  });
+}
 
   try {
     // ---------- 1. Traer partidos (hoy + mañana) ----------
@@ -80,32 +79,40 @@ export default async function handler(req, res) {
     // ---------- 3. Construir prompt para Claude ----------
     const prompt = buildPrompt(matchesData);
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+   const geminiRes = await fetch(
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+      ],
+    }),
+  }
+);
 
-    const claudeData = await claudeRes.json();
+const geminiData = await geminiRes.json();
 
-    if (!claudeData.content) {
-      return res.status(500).json({ error: "Respuesta inválida de Claude", raw: claudeData });
-    }
+const text =
+  geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    const text = claudeData.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("");
+if (!text) {
+  return res.status(500).json({
+    error: "Respuesta inválida de Gemini",
+    raw: geminiData,
+  });
+}
 
-    const clean = text.replace(/```json|```/g, "").trim();
-
+const clean = text.replace(/```json|```/g, "").trim();
     let picks;
     try {
       picks = JSON.parse(clean);

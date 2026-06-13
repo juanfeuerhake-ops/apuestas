@@ -188,4 +188,3 @@ Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con esta forma ex
   ]
 }`;
 } 
-Esto es todo lo que me aparece

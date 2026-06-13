@@ -72,7 +72,18 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "No se pudo parsear la respuesta de Gemini", raw: text });
     }
 
-    return res.status(200).json({ picks, updated: data.updated });
+    // Gemini puede devolver { "picks": [...] } o directamente [...].
+    // Normalizamos para que siempre sea un array.
+    let picksArray;
+    if (Array.isArray(picks)) {
+      picksArray = picks;
+    } else if (Array.isArray(picks.picks)) {
+      picksArray = picks.picks;
+    } else {
+      return res.status(500).json({ error: "Formato inesperado de Gemini", raw: picks });
+    }
+
+    return res.status(200).json({ picks: picksArray, updated: data.updated });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

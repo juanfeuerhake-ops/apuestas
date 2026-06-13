@@ -254,7 +254,11 @@ async function loadPicks(){
     }
 
     if(!data.picks || data.picks.length === 0){
-      content.innerHTML = `<div class="state-box">No hay partidos programados para hoy/mañana.</div>`;
+      let debugHtml = '';
+      if(data.debug){
+        debugHtml = `<pre style="text-align:left; background:var(--panel-2); padding:12px; border-radius:6px; margin-top:16px; font-size:11px; overflow-x:auto; color:var(--muted);">${escapeHtml(JSON.stringify(data.debug, null, 2))}</pre>`;
+      }
+      content.innerHTML = `<div class="state-box">No hay partidos programados para hoy/mañana.${debugHtml}</div>`;
       return;
     }
 

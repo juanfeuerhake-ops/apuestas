@@ -249,7 +249,7 @@
 <script>
 async function loadPicks(){
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="state-box"><div class="spinner"></div>Cargando partidos y generando análisis...</div>`;
+  content.innerHTML = `<div class="state-box"><div class="spinner"></div>Analizando partidos de hoy y mañana...</div>`;
 
   try{
     const res = await fetch('/api/picks');

@@ -3,20 +3,21 @@
 //
 // Flujo:
 // 1. Llama a API-Football para traer partidos de hoy y mañana (Mundial 2026, league id 1).
-// 2. Para cada partido, trae forma reciente de ambos equipos.
-// 3. Construye un prompt con todo eso y se lo manda a Claude.
-// 4. Claude devuelve un JSON con picks + razonamiento, en el mismo formato que el frontend espera.
-// 5. Devolvemos ese JSON al frontend.
+// 2. Si no hay partidos hoy/mañana, busca los próximos disponibles en la temporada (fallback).
+// 3. Para cada partido, trae forma reciente de ambos equipos.
+// 4. Construye un prompt con todo eso y se lo manda a Gemini.
+// 5. Gemini devuelve un JSON con picks + razonamiento, en el mismo formato que el frontend espera.
+// 6. Devolvemos ese JSON al frontend.
 
 export default async function handler(req, res) {
- const SPORTS_API_KEY = process.env.SPORTS_API_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  const SPORTS_API_KEY = process.env.SPORTS_API_KEY;
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-if (!SPORTS_API_KEY || !GEMINI_API_KEY) {
-  return res.status(500).json({
-    error: "Faltan API keys en las variables de entorno (SPORTS_API_KEY / GEMINI_API_KEY)."
-  });
-}
+  if (!SPORTS_API_KEY || !GEMINI_API_KEY) {
+    return res.status(500).json({
+      error: "Faltan API keys en las variables de entorno (SPORTS_API_KEY / GEMINI_API_KEY)."
+    });
+  }
 
   try {
     // ---------- 1. Traer partidos (hoy + mañana) ----------
@@ -39,13 +40,50 @@ if (!SPORTS_API_KEY || !GEMINI_API_KEY) {
       )
     );
 
-    const fixtures = fixturesRes.flatMap((r) => r.response || []);
+    let fixtures = fixturesRes.flatMap((r) => r.response || []);
 
+    // ---------- 1b. Diagnóstico / fallback si no hay fixtures hoy/mañana ----------
     if (fixtures.length === 0) {
-      return res.status(200).json({ picks: [], message: "No hay partidos programados para hoy/mañana." });
+      // Probamos sin filtro de fecha para ver si la liga/temporada tiene datos en absoluto
+      const debugRes = await fetch(
+        `https://v3.football.api-sports.io/fixtures?league=1&season=2026`,
+        { headers: { "x-apisports-key": SPORTS_API_KEY } }
+      ).then((r) => r.json());
+
+      const seasonFixtures = debugRes.response || [];
+
+      // Fallback: si SÍ hay fixtures en la temporada pero ninguno cae hoy/mañana,
+      // tomamos los próximos partidos por fecha (los más cercanos a hoy).
+      if (seasonFixtures.length > 0) {
+        const now = today.getTime();
+        const upcoming = seasonFixtures
+          .filter((fx) => new Date(fx.fixture.date).getTime() >= now)
+          .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
+
+        fixtures = upcoming.slice(0, 8);
+      }
+
+      // Si sigue sin haber nada, devolvemos el diagnóstico completo para depurar
+      if (fixtures.length === 0) {
+        return res.status(200).json({
+          picks: [],
+          message: "No hay partidos programados para hoy/mañana.",
+          debug: {
+            dates_queried: [fmt(today), fmt(tomorrow)],
+            raw_responses_today_tomorrow: fixturesRes.map((r) => ({
+              results: r.results,
+              errors: r.errors,
+              paging: r.paging,
+            })),
+            season_total_fixtures: debugRes.results,
+            season_errors: debugRes.errors,
+            season_sample: seasonFixtures.slice(0, 2),
+          },
+        });
+      }
     }
 
-    // Limitar a un número razonable para no gastar de más en la API de Claude
+    // Limitar a un número razonable para no gastar de más en la API de Gemini
     const limited = fixtures.slice(0, 8);
 
     // ---------- 2. Traer forma reciente de cada equipo ----------
@@ -77,49 +115,49 @@ if (!SPORTS_API_KEY || !GEMINI_API_KEY) {
       })
     );
 
-    // ---------- 3. Construir prompt para Claude ----------
+    // ---------- 3. Construir prompt para Gemini ----------
     const prompt = buildPrompt(matchesData);
 
-const geminiRes = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
             {
-              text: prompt,
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
             },
           ],
-        },
-      ],
-    }),
-  }
-);
+        }),
+      }
+    );
 
-const geminiData = await geminiRes.json();
+    const geminiData = await geminiRes.json();
 
-const text =
-  geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const text =
+      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-if (!text) {
-  return res.status(500).json({
-    error: "Respuesta inválida de Gemini",
-    raw: geminiData,
-  });
-}
+    if (!text) {
+      return res.status(500).json({
+        error: "Respuesta inválida de Gemini",
+        raw: geminiData,
+      });
+    }
 
-const clean = text.replace(/```json|```/g, "").trim();
+    const clean = text.replace(/```json|```/g, "").trim();
 
     let picks;
     try {
       picks = JSON.parse(clean);
     } catch (e) {
-      return res.status(500).json({ error: "No se pudo parsear la respuesta de Claude", raw: text });
+      return res.status(500).json({ error: "No se pudo parsear la respuesta de Gemini", raw: text });
     }
 
     return res.status(200).json({ picks });
@@ -150,7 +188,7 @@ function summarizeResult(teamId) {
 }
 
 function buildPrompt(matches) {
-  return `Eres un analista deportivo. Te paso datos reales de partidos del Mundial 2026 (próximas 48h) con la forma reciente (últimos 5 partidos) de cada selección.
+  return `Eres un analista deportivo. Te paso datos reales de partidos del Mundial 2026 (próximos disponibles) con la forma reciente (últimos 5 partidos) de cada selección.
 
 Para cada partido, propone 1-2 "picks" (mercados de apuesta) con:
 - market: nombre del mercado (ej "Doble oportunidad", "Over/Under goles", "Ambos anotan")
@@ -187,4 +225,4 @@ Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con esta forma ex
     }
   ]
 }`;
-} 
+}

@@ -1,0 +1,52 @@
+    let result = "E";
+    if (goalsFor > goalsAgainst) result = "G";
+    if (goalsFor < goalsAgainst) result = "P";
+
+    return {
+      vs: opponent,
+      local: isHome,
+      resultado: result,
+      marcador: `${goalsFor}-${goalsAgainst}`,
+    };
+  };
+}
+
+function buildPrompt(matches) {
+  return `Eres un analista deportivo. Te paso datos reales de partidos del Mundial 2026 (próximas 48h) con la forma reciente (últimos 5 partidos) de cada selección.
+
+Para cada partido, propone 1-2 "picks" (mercados de apuesta) con:
+- market: nombre del mercado (ej "Doble oportunidad", "Over/Under goles", "Ambos anotan")
+- selection: la selección concreta del pick
+- odds_estimate: una cuota estimada razonable (string, ej "1.35") - deja claro que es una ESTIMACIÓN, no cuota real de casa de apuestas
+- confidence: número 15-92 (nunca 100, nunca menor a 15) que representa cuántas señales de contexto respaldan el pick
+- reasons: array de 2-4 strings, cada uno explicando una razón concreta basada en los datos de forma reciente que tienes (ej "Ganó 4 de sus últimos 5 partidos como local")
+- risk: un string explicando el principal riesgo/razón por la que el pick podría fallar
+
+Reglas:
+- Basa el razonamiento SOLO en los datos de forma reciente proporcionados. No inventes lesiones, alineaciones ni datos que no tengas.
+- Si no hay suficiente data de forma (selecciones que no jugaron amistosos recientes), dilo en "reasons" y baja la confianza.
+- Sé honesto: ningún pick es 100% seguro.
+
+Datos de los partidos:
+${JSON.stringify(matches, null, 2)}
+
+Responde ÚNICAMENTE con un JSON válido, sin texto adicional, con esta forma exacta:
+{
+  "picks": [
+    {
+      "match": "Equipo A vs Equipo B",
+      "meta": "Fecha · Hora · Sede",
+      "confidence": 65,
+      "selections": [
+        {
+          "market": "...",
+          "selection": "...",
+          "odds_estimate": "1.40"
+        }
+      ],
+      "reasons": ["...", "..."],
+      "risk": "..."
+    }
+  ]
+}`;
+}

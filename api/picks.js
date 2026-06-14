@@ -18,6 +18,39 @@ export default async function handler(req, res) {
     });
   }
 
+  // ---------- Ruta de prueba de diagnóstico ----------
+  if (req.query.test === "true") {
+    try {
+      const geminiRes = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "Escribe un cuento corto de 150 palabras sobre un gato aventurero en el espacio." }] }],
+          }),
+        }
+      );
+
+      if (!geminiRes.ok) {
+        return res.status(502).json({ error: `Test falló HTTP ${geminiRes.status}` });
+      }
+
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      return res.status(200).json({ 
+        success: true, 
+        length: text.length,
+        text: text 
+      });
+    } catch (err) {
+      return res.status(500).json({ error: "Test error", details: err.message });
+    }
+  }
+
   try {
     // ---------- 1. Verificar caché ----------
     const now = Date.now();

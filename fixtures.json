@@ -1,38 +1,3 @@
-name: Actualizar partidos del día
-
-on:
-  schedule:
-    # Corre todos los días a las 06:00 AM hora de Chile (UTC-3 = 09:00 UTC)
-    - cron: '0 9 * * *'
-  workflow_dispatch: # También permite correrlo manualmente desde GitHub
-
-jobs:
-  update-fixtures:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Generar fixtures.json con partidos de hoy y mañana
-        run: node scripts/update-fixtures.js
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
-      - name: Commit y push si hay cambios
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add fixtures.json
-          git diff --staged --quiet || git commit -m "Actualizar partidos: $(date '+%Y-%m-%d')"
-          git push
 // scripts/update-fixtures.js
 // Corre cada día vía GitHub Actions.
 // Filtra los partidos del Mundial 2026 para hoy y mañana,

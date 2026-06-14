@@ -13,6 +13,7 @@ const CACHE_UFC_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 
 export default async function handler(req, res) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  const GEMINI_UFC_KEY = process.env.GEMINI_UFC_KEY || GEMINI_API_KEY;
 
   if (!GEMINI_API_KEY) {
     return res.status(500).json({ error: "Falta la variable de entorno GEMINI_API_KEY." });
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
   if (req.query.test === "true") {
     try {
       const geminiRes = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
@@ -97,7 +98,7 @@ export default async function handler(req, res) {
       ufcPicks = cachedUFC;
     } else {
       const ufcPrompt = buildUFCPrompt();
-      const ufcGeminiData = await callGemini(GEMINI_API_KEY, ufcPrompt, true);
+      const ufcGeminiData = await callGemini(GEMINI_UFC_KEY, ufcPrompt, true);
       const ufcArray = extractArray(ufcGeminiData);
 
       if (ufcArray) {
@@ -144,7 +145,7 @@ async function callGemini(apiKey, prompt, useWebSearch = false) {
   }
 
   const geminiRes = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
     {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },

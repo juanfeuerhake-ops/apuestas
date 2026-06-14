@@ -1,10 +1,9 @@
 {
-  "name": "scanner-de-picks",
+  "name": "scanner-de-picks-dinamico",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "description": "Scanner de picks deportivos con análisis generado por IA.",
+  "description": "Scanner de picks deportivos con datos en vivo (API-Football) + análisis generado por Claude.",
   "scripts": {
-    "update-fixtures": "node scripts/update-fixtures.js"
+    "dev": "vercel dev"
   }
 }

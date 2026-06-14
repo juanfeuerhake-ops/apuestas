@@ -30,12 +30,29 @@ export default async function handler(req, res) {
     const raw = fs.readFileSync(fixturesPath, "utf-8");
     const data = JSON.parse(raw);
 
-    const matches = data.matches || [];
+    const allMatches = data.matches || [];
+
+    // Obtener hoy y mañana en formato YYYY-MM-DD ajustado a UTC-6 (Hora de México)
+    const getTodayAndTomorrow = () => {
+      const offset = -6; // UTC-6
+      const d = new Date(new Date().getTime() + offset * 3600 * 1000);
+      const pad = (n) => String(n).padStart(2, "0");
+      const fmt = (dateObj) => `${dateObj.getUTCFullYear()}-${pad(dateObj.getUTCMonth() + 1)}-${pad(dateObj.getUTCDate())}`;
+      
+      const todayStr = fmt(d);
+      const tomorrowObj = new Date(d.getTime() + 24 * 3600 * 1000);
+      const tomorrowStr = fmt(tomorrowObj);
+      
+      return [todayStr, tomorrowStr];
+    };
+
+    const [today, tomorrow] = getTodayAndTomorrow();
+    const matches = allMatches.filter(m => m.date === today || m.date === tomorrow);
 
     if (matches.length === 0) {
       return res.status(200).json({
         picks: [],
-        message: "No hay partidos cargados en fixtures.json."
+        message: `No hay partidos programados en fixtures.json para hoy (${today}) o mañana (${tomorrow}).`
       });
     }
 

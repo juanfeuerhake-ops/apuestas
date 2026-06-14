@@ -158,7 +158,6 @@ const TEAM_CONTEXT = {
   "Inglaterra": "Finalista de la Euro 2024, plantel de élite europea.",
   "Sudán del Sur": "Debuta en su primer Mundial.",
   "Colombia": "Selección sudamericana de nivel alto, clasificación sólida.",
-  "Honduras": "Selección centroamericana, clasificación vía Concacaf.",
 };
 
 function getTeamContext(matchName) {
@@ -223,7 +222,11 @@ Responde SOLO JSON con el mismo array pero con el campo "notes" rellenado:
           },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+            generationConfig: { 
+              temperature: 0.3, 
+              maxOutputTokens: 1024,
+              responseMimeType: "application/json"
+            },
           }),
         }
       );
@@ -234,7 +237,20 @@ Responde SOLO JSON con el mismo array pero con el campo "notes" rellenado:
 
       const data = await res.json();
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const clean = text.replace(/```json|```/g, "").trim();
+      
+      // Extraer JSON de forma robusta
+      let clean = text.trim();
+      const firstBrace = clean.indexOf('{');
+      const lastBrace = clean.lastIndexOf('}');
+      const firstBracket = clean.indexOf('[');
+      const lastBracket = clean.lastIndexOf(']');
+
+      if (firstBrace !== -1 && lastBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+        clean = clean.substring(firstBrace, lastBrace + 1);
+      } else if (firstBracket !== -1 && lastBracket !== -1) {
+        clean = clean.substring(firstBracket, lastBracket + 1);
+      }
+
       const notes = JSON.parse(clean);
 
       enrichedMatches = matches.map((m) => {
@@ -243,7 +259,7 @@ Responde SOLO JSON con el mismo array pero con el campo "notes" rellenado:
       });
       console.log("Contexto adicional añadido por Gemini.");
     } catch (e) {
-      console.log("No se pudo enriquecer con Gemini, continuing without notes:", e.message);
+      console.log("No se pudo enriquecer con Gemini, continuando sin notes:", e.message);
     }
   }
 

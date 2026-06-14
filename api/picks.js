@@ -55,6 +55,7 @@ export default async function handler(req, res) {
           generationConfig: {
             temperature: 0.4,
             maxOutputTokens: 2048,
+            responseMimeType: "application/json",
           },
         }),
       }
@@ -76,20 +77,38 @@ export default async function handler(req, res) {
 
     if (!text) {
       return res.status(500).json({
-        error: "Respuesta inválida de Gemini",
+        error: "Respuesta vacía de Gemini",
         raw: geminiData,
       });
     }
 
-    const clean = text.replace(/```json|```/g, "").trim();
+    // Extraer JSON de forma robusta localizando llaves o corchetes
+    let clean = text.trim();
+    const firstBrace = clean.indexOf('{');
+    const lastBrace = clean.lastIndexOf('}');
+    const firstBracket = clean.indexOf('[');
+    const lastBracket = clean.lastIndexOf(']');
+
+    if (firstBrace !== -1 && lastBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+      clean = clean.substring(firstBrace, lastBrace + 1);
+    } else if (firstBracket !== -1 && lastBracket !== -1) {
+      clean = clean.substring(firstBracket, lastBracket + 1);
+    }
 
     let picks;
     try {
       picks = JSON.parse(clean);
     } catch (e) {
-      return res.status(500).json({ error: "No se pudo parsear la respuesta de Gemini", raw: text });
+      console.error("Error al parsear el JSON de Gemini:", e);
+      console.error("Texto original de Gemini:", text);
+      return res.status(500).json({ 
+        error: "No se pudo parsear la respuesta de Gemini", 
+        raw: text 
+      });
     }
 
+    // Gemini puede devolver { "picks": [...] } o directamente [...].
+    // Normalizamos para que siempre sea un array.
     let picksArray;
     if (Array.isArray(picks)) {
       picksArray = picks;

@@ -1,9 +1,1 @@
-{
-  "name": "scanner-de-picks-dinamico",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Scanner de picks deportivos con datos en vivo (API-Football) + análisis generado por Claude.",
-  "scripts": {
-    "dev": "vercel dev"
-  }
-}
+

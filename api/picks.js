@@ -1,17 +1,13 @@
 // /api/picks.js
 // Función serverless (Vercel). Se ejecuta en el servidor, nunca en el navegador.
-//
-// Flujo:
-// 1. Lee fixtures.json (partidos próximos, actualizado manualmente cada 1-2 días).
-// 2. Construye un prompt con esos datos y se lo manda a Gemini.
-// 3. Gemini devuelve un JSON con picks + razonamiento, en el formato que el frontend espera.
-// 4. Devolvemos ese JSON al frontend.
-//
-// Para actualizar los partidos: edita /fixtures.json en el repo y haz commit.
-// No requiere ninguna API deportiva externa.
 
 import fs from "fs";
 import path from "path";
+
+// ---------- Caché en memoria (TTL de 2 horas) ----------
+let cachedPicks = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas
 
 export default async function handler(req, res) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -23,7 +19,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ---------- 1. Leer fixtures.json ----------
+    // ---------- 1. Verificar caché ----------
+    const now = Date.now();
+    if (cachedPicks && (now - cacheTimestamp) < CACHE_TTL_MS) {
+      return res.status(200).json(cachedPicks);
+    }
+
+    // ---------- 2. Leer fixtures.json ----------
     const fixturesPath = path.join(process.cwd(), "fixtures.json");
     const raw = fs.readFileSync(fixturesPath, "utf-8");
     const data = JSON.parse(raw);
@@ -37,14 +39,17 @@ export default async function handler(req, res) {
       });
     }
 
-    // ---------- 2. Construir prompt para Gemini ----------
+    // ---------- 3. Construir prompt para Gemini ----------
     const prompt = buildPrompt(matches, data.updated);
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
@@ -54,6 +59,15 @@ export default async function handler(req, res) {
         }),
       }
     );
+
+    // ---------- 4. Verificar respuesta HTTP ----------
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      return res.status(502).json({
+        error: `Error de la API de Gemini (HTTP ${geminiRes.status})`,
+        details: errBody,
+      });
+    }
 
     const geminiData = await geminiRes.json();
 
@@ -76,8 +90,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "No se pudo parsear la respuesta de Gemini", raw: text });
     }
 
-    // Gemini puede devolver { "picks": [...] } o directamente [...].
-    // Normalizamos para que siempre sea un array.
     let picksArray;
     if (Array.isArray(picks)) {
       picksArray = picks;
@@ -87,7 +99,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Formato inesperado de Gemini", raw: picks });
     }
 
-    return res.status(200).json({ picks: picksArray, updated: data.updated });
+    const result = { picks: picksArray, updated: data.updated };
+
+    // ---------- 5. Guardar en caché ----------
+    cachedPicks = result;
+    cacheTimestamp = Date.now();
+
+    return res.status(200).json(result);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

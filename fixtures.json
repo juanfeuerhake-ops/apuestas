@@ -1,76 +1,35 @@
-{
-  "updated": "2026-06-13",
-  "note": "Actualizar este archivo cada 1-2 días con los próximos partidos. Formato de 'form' es opcional: si se conoce la forma reciente real (últimos 5: V/E/D), incluirla; si no, dejar como null y la IA lo indicará como dato no disponible.",
-  "matches": [
-    {
-      "match": "Qatar vs Suiza",
-      "date": "2026-06-13",
-      "time_mx": "13:00",
-      "venue": "Levi's Stadium, Santa Clara",
-      "group": "Grupo B",
-      "home_form": "Anfitrión de Qatar 2022, pero como selección de menor ranking dentro de este grupo en el sorteo.",
-      "away_form": "Selección europea consolidada, habitual en fases finales de Mundiales y Eurocopas.",
-      "notes": "Diferencia de nivel marcada a favor de Suiza."
-    },
-    {
-      "match": "Brasil vs Marruecos",
-      "date": "2026-06-13",
-      "time_mx": "16:00",
-      "venue": "MetLife Stadium, East Rutherford",
-      "group": "Grupo C",
-      "home_form": "Una de las selecciones favoritas del torneo, plantel con jugadores de élite mundial, suele atacar desde el inicio incluso con ventaja.",
-      "away_form": "Semifinalista en Qatar 2022, plantel con varios jugadores en clubes top de Europa, capaz de generar ocasiones ante cualquier rival.",
-      "notes": "Brasil favorito claro, pero Marruecos no es un equipo que se 'tape' 90 minutos sin crear nada."
-    },
-    {
-      "match": "Haití vs Escocia",
-      "date": "2026-06-13",
-      "time_mx": "19:00",
-      "venue": "Gillette Stadium, Foxborough",
-      "group": "Grupo C",
-      "home_form": "Debuta en su primer Mundial masculino, sin experiencia previa en esta instancia.",
-      "away_form": "Regresa al Mundial tras un proceso de clasificación europeo exigente, con jugadores en ligas top de Europa.",
-      "notes": "Escocia favorita por experiencia y profundidad de plantel; Haití puede jugar 'sin presión' como debutante."
-    },
-    {
-      "match": "Australia vs Türkiye",
-      "date": "2026-06-13",
-      "time_mx": "22:00",
-      "venue": "BC Place, Vancouver",
-      "group": "Grupo D",
-      "home_form": "Selección oceánica consolidada (clasificación directa, no repechaje en esta edición), estilo físico y disciplinado.",
-      "away_form": "Selección europea con generación de jugadores jóvenes de nivel en ligas top, en crecimiento en eliminatorias recientes.",
-      "notes": "Partido parejo entre dos selecciones de nivel medio-alto en su confederación."
-    },
-    {
-      "match": "Alemania vs Curazao",
-      "date": "2026-06-14",
-      "time_mx": "11:00",
-      "venue": "NRG Stadium, Houston",
-      "group": "Grupo E",
-      "home_form": "Selección europea consolidada, clasificación directa habitual a Mundiales, candidata histórica.",
-      "away_form": "Debuta en su primer Mundial, clasificación histórica vía Concacaf, gran logro para una selección pequeña.",
-      "notes": "Gran diferencia de jerarquía y experiencia mundialista a favor de Alemania."
-    },
-    {
-      "match": "Países Bajos vs Japón",
-      "date": "2026-06-14",
-      "time_mx": "14:00",
-      "venue": "AT&T Stadium, Arlington",
-      "group": "Grupo F",
-      "home_form": "Selección europea de alto nivel, habitual en rondas avanzadas, juego ofensivo de posesión.",
-      "away_form": "Selección asiática sólida, con buen desempeño en mundiales recientes (octavos en 2022), también de estilo ofensivo.",
-      "notes": "Ambos equipos con estilo ofensivo y de posesión — partido con potencial de muchos goles."
-    },
-    {
-      "match": "Costa de Marfil vs Ecuador",
-      "date": "2026-06-14",
-      "time_mx": "17:00",
-      "venue": "Lincoln Financial Field, Philadelphia",
-      "group": "Grupo E",
-      "home_form": "Campeón de la Copa Africana de Naciones reciente, plantel con jugadores en ligas top europeas.",
-      "away_form": "Selección sudamericana de zona media-alta, clasificación sólida en eliminatorias, defensa ordenada.",
-      "notes": "Partido parejo entre selecciones con jugadores de buen nivel individual."
-    }
-  ]
-}
+name: Actualizar partidos del día
+
+on:
+  schedule:
+    # Corre todos los días a las 06:00 AM hora de Chile (UTC-3 = 09:00 UTC)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # También permite correrlo manualmente desde GitHub
+
+jobs:
+  update-fixtures:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generar fixtures.json con partidos de hoy y mañana
+        run: node scripts/update-fixtures.js
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Commit y push si hay cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fixtures.json
+          git diff --staged --quiet || git commit -m "Actualizar partidos: $(date '+%Y-%m-%d')"
+          git push

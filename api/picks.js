@@ -39,7 +39,8 @@ export default async function handler(req, res) {
         return res.status(502).json({ error: `Test falló HTTP ${geminiRes.status}` });
       }
 
-      const data = await res.json();
+      // FIX: era "res.json()" (bug), debe ser "geminiRes.json()"
+      const data = await geminiRes.json();
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
       return res.status(200).json({ 
         success: true, 
@@ -104,7 +105,7 @@ export default async function handler(req, res) {
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.4,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 8192, // FIX: era 2048, insuficiente para varios partidos
             responseMimeType: "application/json",
           },
           safetySettings: [
@@ -140,6 +141,12 @@ export default async function handler(req, res) {
 
     const geminiData = await geminiRes.json();
 
+    // Verificar si Gemini cortó la respuesta por límite de tokens
+    const finishReason = geminiData?.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== "STOP") {
+      console.warn("Gemini finishReason inesperado:", finishReason);
+    }
+
     const text =
       geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
@@ -168,10 +175,12 @@ export default async function handler(req, res) {
       resultJson = JSON.parse(clean);
     } catch (e) {
       console.error("Error al parsear el JSON de Gemini:", e);
+      console.error("finishReason:", finishReason);
       console.error("Texto original de Gemini:", text);
       return res.status(500).json({ 
         error: "No se pudo parsear la respuesta de Gemini", 
-        raw: text 
+        raw: text,
+        finishReason: finishReason || "desconocido",
       });
     }
 
@@ -273,17 +282,17 @@ function buildPrompt(matches, updated) {
 
 Por cada partido, proporciona un análisis estructurado únicamente en base al estado de forma física y táctica provisto para cada selección (home_form / away_form / notes).
 
-Devuelve los siguientes campos exactos por partido:
+Devuelve los siguientes campos exactos por partido (sé conciso, máx 15 palabras por campo de texto):
 - match: nombre del partido.
 - meta: metadata proporcionada (Fecha, sede, etc.).
-- tactical_style: estilo táctico que se prevé (ej: "Ataque constante y presión alta", "Bloque bajo defensivo y contraataque", "Juego equilibrado").
-- tactical_favor: evaluación cualitativa de ventaja táctica. Debe ser exactamente una de estas tres opciones: "Local favorito", "Visitante favorito" o "Muy equilibrado".
-- reasons: un array con 2 explicaciones breves (máx 20 palabras cada una) sobre la condición de los equipos.
-- tactical_risk: descripción del principal peligro o desafío táctico para el desarrollo del partido.
+- tactical_style: estilo táctico previsto (máx 8 palabras).
+- tactical_favor: EXACTAMENTE una de estas tres opciones: "Local favorito", "Visitante favorito" o "Muy equilibrado".
+- reasons: array con EXACTAMENTE 2 strings, máx 15 palabras cada uno.
+- tactical_risk: principal riesgo táctico (máx 12 palabras).
 
 Partidos a analizar:
 ${JSON.stringify(matches)}
 
-Responde estrictamente en formato JSON con la siguiente estructura (no agregues Markdown, código adicional ni texto fuera del JSON):
+Responde ÚNICAMENTE con el JSON, sin Markdown ni texto adicional:
 {"analyses":[{"match":"A vs B","meta":"...","tactical_style":"...","tactical_favor":"Local favorito","reasons":["...","..."],"tactical_risk":"..."}]}`;
 }

@@ -260,7 +260,11 @@ async function loadPicks(){
 
     if(!res.ok){
       const errData = await res.json().catch(() => ({}));
-      content.innerHTML = `<div class="state-box">⚠ Error del servidor (${res.status}): ${escapeHtml(errData.error || 'Error desconocido')}</div>`;
+      let debugHtml = '';
+      if(errData.raw){
+        debugHtml = `<pre style="text-align:left; background:var(--panel-2); padding:12px; border-radius:6px; margin-top:16px; font-size:11px; overflow-x:auto; color:var(--muted); max-height: 250px;">${escapeHtml(typeof errData.raw === 'object' ? JSON.stringify(errData.raw, null, 2) : errData.raw)}</pre>`;
+      }
+      content.innerHTML = `<div class="state-box">⚠ Error del servidor (${res.status}): ${escapeHtml(errData.error || 'Error desconocido')}${debugHtml}</div>`;
       return;
     }
 

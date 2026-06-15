@@ -39,10 +39,25 @@ export default async function handler(req, res) {
       if (matches.length === 0) {
         mundialPicks = { picks: [], message: "No hay partidos del Mundial programados para hoy o mañana." };
       } else {
-        const text = await callGroq(GROQ_KEY, buildMundialPrompt(matches));
-        const arr = extractArray(text);
-        if (arr && arr.length > 0) {
-          mundialPicks = { picks: arr, updated: new Date().toISOString().split("T")[0] };
+  // Procesar en lotes de 3 partidos para no exceder TPM de Groq
+        const BATCH_SIZE = 3;
+        const allPicks = [];
+        for (let i = 0; i < matches.length; i += BATCH_SIZE) {
+          const batch = matches.slice(i, i + BATCH_SIZE);
+          try {
+            const text = await callGroq(GROQ_KEY, buildMundialPrompt(batch));
+            const arr = extractArray(text);
+            if (arr && arr.length > 0) allPicks.push(...arr);
+          } catch (batchErr) {
+            console.warn(`Lote ${i/BATCH_SIZE + 1} falló:`, batchErr.message);
+          }
+          // Pequeña pausa entre lotes para no saturar TPM
+          if (i + BATCH_SIZE < matches.length) {
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        }
+        if (allPicks.length > 0) {
+          mundialPicks = { picks: allPicks, updated: new Date().toISOString().split("T")[0] };
           cachedMundial = mundialPicks;
           cacheMundialTimestamp = now;
         } else {

@@ -5,15 +5,15 @@ import path from "path";
 // ---------- Caché en memoria ----------
 let cachedMundial = null;
 let cacheMundialTimestamp = 0;
-const CACHE_MUNDIAL_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
+const CACHE_MUNDIAL_TTL_MS = 24 * 60 * 60 * 1000;
 
 let cachedUFC = null;
 let cacheUFCTimestamp = 0;
-const CACHE_UFC_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
+const CACHE_UFC_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default async function handler(req, res) {
-  const GROQ_KEY = process.env.GROQ_UFC_KEY;       // Groq → Mundial
-  const GEMINI_KEY = process.env.GEMINI_API_KEY;   // Gemini → UFC
+  const GROQ_KEY = process.env.GROQ_UFC_KEY;
+  const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
   if (!GROQ_KEY) return res.status(500).json({ error: "Falta GROQ_UFC_KEY en las variables de entorno." });
   if (!GEMINI_KEY) return res.status(500).json({ error: "Falta GEMINI_API_KEY en las variables de entorno." });
@@ -53,8 +53,7 @@ export default async function handler(req, res) {
         const analysesArray = extractArray(text);
 
         if (analysesArray) {
-          const picksArray = analysesArray.map(p => mapMundialPick(p));
-          mundialPicks = { picks: picksArray, updated: fixtureData.updated };
+          mundialPicks = { picks: analysesArray, updated: fixtureData.updated };
           cachedMundial = mundialPicks;
           cacheMundialTimestamp = now;
         } else {
@@ -107,7 +106,7 @@ async function callGroq(apiKey, prompt) {
     body: JSON.stringify({
       model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.4,
+      temperature: 0.3,
       max_tokens: 8192,
       response_format: { type: "json_object" },
     }),
@@ -134,7 +133,7 @@ async function callGemini(apiKey, prompt) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.4,
+          temperature: 0.3,
           maxOutputTokens: 8192,
           responseMimeType: "application/json",
         },
@@ -190,82 +189,90 @@ function extractArray(text) {
 
 // ─── Prompt Mundial ──────────────────────────────────────────────────────────
 function buildMundialPrompt(matches, updated) {
-  return `Eres un analista de fútbol. Analiza los siguientes partidos del Mundial 2026 (datos al ${updated}).
+  return `Eres un scout profesional de fútbol y analista de apuestas con acceso a datos tácticos, estadísticos e históricos. Tu objetivo es identificar picks de VALOR REAL: no los obvios, sino los que tienen respaldo analítico sólido y que las casas de apuestas suelen subestimar.
 
-Por cada partido devuelve estos campos (máx 15 palabras por campo de texto):
-- match: nombre del partido
-- meta: metadata (Fecha, sede, etc.)
-- tactical_style: estilo táctico previsto (máx 8 palabras)
-- tactical_favor: EXACTAMENTE una de: "Local favorito", "Visitante favorito" o "Muy equilibrado"
-- reasons: array con EXACTAMENTE 2 strings, máx 15 palabras cada uno
-- tactical_risk: principal riesgo táctico (máx 12 palabras)
+Analiza cada partido del Mundial 2026 (datos al ${updated}) y para cada uno entrega 2-3 picks en mercados distintos. NO uses solo "ganador del partido". Explora mercados alternativos con fundamento real.
 
-Partidos:
+MERCADOS DISPONIBLES (elige los que tengan más respaldo analítico para ese partido):
+- Resultado al descanso (ej: "Empate al HT aunque gane uno al final")
+- Handicap asiático (ej: "-0.5 al equipo X", "+1.5 al equipo Y")
+- Total de goles over/under (ej: "Menos de 2.5 goles" con fundamento defensivo)
+- Ambos equipos anotan: Sí/No
+- Primer tiempo over/under (ej: "Menos de 1.5 goles en el 1T")
+- Goles en la segunda mitad (si un equipo suele arrancar lento)
+- Tarjetas: over/under (si el partido tiene historial físico)
+- Corners: over/under (si un equipo domina en posesión y centros)
+
+Para cada pick explica el RAZONAMIENTO ESPECÍFICO: por qué ese mercado, qué patrón táctico o estadístico lo respalda, y por qué tiene valor real (no es solo apostar al favorito obvio).
+
+Partidos a analizar:
 ${JSON.stringify(matches)}
 
-Responde SOLO con JSON válido, sin texto adicional:
-{"analyses":[{"match":"A vs B","meta":"...","tactical_style":"...","tactical_favor":"Local favorito","reasons":["...","..."],"tactical_risk":"..."}]}`;
+Devuelve SOLO este JSON sin texto adicional:
+{
+  "analyses": [
+    {
+      "match": "Equipo A vs Equipo B",
+      "meta": "Fecha, sede, grupo",
+      "context": "1 oración sobre el contexto clave del partido (stakes, forma, presión)",
+      "picks": [
+        {
+          "market": "Nombre del mercado",
+          "selection": "Apuesta exacta",
+          "odds_estimate": "cuota estimada como string ej: 1.75",
+          "confidence": 72,
+          "reasoning": "Explicación de 2-3 oraciones: qué patrón táctico/estadístico respalda esto y por qué tiene valor real más allá del favorito obvio",
+          "edge": "En 1 frase: la ventaja analítica que otros apostadores suelen perder de vista"
+        }
+      ],
+      "risk": "Principal factor que podría invalidar estos picks"
+    }
+  ]
+}`;
 }
 
 // ─── Prompt UFC ──────────────────────────────────────────────────────────────
 function buildUFCPrompt() {
   const today = new Date().toISOString().split("T")[0];
-  return `Eres un analista de MMA. Hoy es ${today}.
+  return `Eres un analista profesional de MMA y apuestas deportivas con conocimiento profundo de estilos de pelea, récords, tendencias físicas y métricas avanzadas (striking accuracy, takedown defense, significant strikes absorbed, etc.). Hoy es ${today}.
 
-Lista el cartel de UFC más próximo este fin de semana o próximos 7 días. Incluye el main event y las 3-5 peleas más importantes.
+Tu tarea: identificar el cartel de UFC de este fin de semana o los próximos 7 días y para cada pelea importante entregar 2-3 picks en mercados distintos con fundamento analítico real. NO solo "quién gana". Los mejores picks en MMA están en los mercados alternativos.
 
-Por cada pelea devuelve (máx 15 palabras por campo):
-- fight: "Peleador A vs Peleador B"
-- title: cinturón en juego o null
-- weight_class: división en español
-- event: nombre del evento (ej: "UFC 317")
-- date: formato YYYY-MM-DD
-- venue: sede y ciudad
-- favor: EXACTAMENTE una de: "Favorito [nombre]" o "Muy equilibrado"
-- style: estilo de pelea previsto (máx 8 palabras)
-- reasons: array con EXACTAMENTE 2 strings, máx 15 palabras cada uno
-- risk: principal wildcard (máx 12 palabras)
+MERCADOS DISPONIBLES (elige los que tengan respaldo real):
+- Método de victoria: KO/TKO, Sumisión, Decisión (unánime o dividida)
+- Over/Under de rounds (ej: "Menos de 1.5 rounds" si hay KO power o "Más de 2.5" si hay chin sólido)
+- Llega al round X: Sí/No (ej: "Llega al round 3: No" si un peleador cierra rápido)
+- Pelea va a distancia: Sí/No
+- Decisión unánime vs dividida
+- Parlay de método + resultado cuando hay alta certeza
 
-Responde SOLO con JSON válido, sin texto adicional:
-{"fights":[{"fight":"...","title":null,"weight_class":"...","event":"...","date":"...","venue":"...","favor":"...","style":"...","reasons":["...","..."],"risk":"..."}]}`;
-}
+Para cada pick explica el RAZONAMIENTO ESPECÍFICO: qué métricas, tendencias de estilo o situación (peso, campamento, historial de lesiones, racha) lo respaldan. Prioriza picks seguros con valor analítico, no apuestas arriesgadas.
 
-// ─── Mapear pick Mundial ──────────────────────────────────────────────────────
-function mapMundialPick(p) {
-  const teams = (p.match || "").split(" vs ");
-  const homeTeam = teams[0]?.trim() || "Local";
-  const awayTeam = teams[1]?.trim() || "Visitante";
+Peleas a cubrir: el main event + 3-4 peleas más importantes del cartel.
 
-  let confidence = 50;
-  const selections = [];
-
-  const favor = p.tactical_favor || "";
-  if (favor.toLowerCase().includes("local")) {
-    confidence = 78;
-    selections.push({ market: "Resultado final", selection: `Ganador ${homeTeam}`, odds_estimate: "1.52" });
-  } else if (favor.toLowerCase().includes("visitante")) {
-    confidence = 76;
-    selections.push({ market: "Resultado final", selection: `Ganador ${awayTeam}`, odds_estimate: "1.68" });
-  } else {
-    confidence = 58;
-    selections.push({ market: "Doble oportunidad", selection: `${homeTeam} o Empate`, odds_estimate: "1.35" });
-  }
-
-  const style = (p.tactical_style || "").toLowerCase();
-  if (style.includes("ataque") || style.includes("ofensivo") || style.includes("goles") || style.includes("presión alta")) {
-    selections.push({ market: "Total de goles", selection: "Más de 1.5 goles", odds_estimate: "1.25" });
-  } else if (style.includes("defensa") || style.includes("defensivo") || style.includes("bloque bajo") || style.includes("pocos goles")) {
-    selections.push({ market: "Total de goles", selection: "Menos de 3.5 goles", odds_estimate: "1.30" });
-  } else {
-    selections.push({ market: "Ambos anotan", selection: "Sí anotan", odds_estimate: "1.75" });
-  }
-
-  return {
-    match: p.match,
-    meta: p.meta,
-    confidence,
-    selections,
-    reasons: p.reasons || [],
-    risk: p.tactical_risk || p.risk || "",
-  };
+Devuelve SOLO este JSON sin texto adicional:
+{
+  "fights": [
+    {
+      "fight": "Peleador A vs Peleador B",
+      "title": "Cinturón en juego o null",
+      "weight_class": "División en español",
+      "event": "Nombre del evento",
+      "date": "YYYY-MM-DD",
+      "venue": "Sede, Ciudad",
+      "context": "1 oración sobre el contexto clave (stakes, narrativa, forma reciente)",
+      "picks": [
+        {
+          "market": "Nombre del mercado",
+          "selection": "Apuesta exacta",
+          "odds_estimate": "cuota estimada como string ej: 1.85",
+          "confidence": 75,
+          "reasoning": "Explicación de 2-3 oraciones: qué métricas o patrones de estilo respaldan esto específicamente",
+          "edge": "En 1 frase: la ventaja analítica que otros apostadores suelen perder de vista"
+        }
+      ],
+      "risk": "Principal factor que podría invalidar estos picks"
+    }
+  ]
+}`;
 }

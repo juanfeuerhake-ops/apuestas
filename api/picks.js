@@ -154,13 +154,13 @@ async function callGroq(apiKey, prompt) {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
+      model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: "Eres un analista profesional de apuestas deportivas. Responde SIEMPRE con JSON válido y nada más. Sin markdown ni texto fuera del JSON." },
         { role: "user", content: prompt }
       ],
       temperature: 0.3,
-      max_tokens: 8192,
+      max_tokens: 2048,
       response_format: { type: "json_object" },
     }),
   });
@@ -207,9 +207,13 @@ function extractArray(text) {
   try {
     const p = JSON.parse(clean);
     if (Array.isArray(p)) return p;
-    return p.analyses || p.fights || p.picks || p.predictions || null;
+    const arr = p.analyses || p.fights || p.picks || p.predictions;
+    if (arr) return arr;
+    console.error("JSON sin array reconocido. Keys:", Object.keys(p));
+    return null;
   } catch (e) {
-    console.error("JSON parse error:", e.message, text.substring(0, 300));
+    console.error("JSON parse error:", e.message);
+    console.error("Texto limpio (500c):", clean.substring(0, 500));
     return null;
   }
 }

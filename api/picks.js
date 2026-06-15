@@ -202,25 +202,18 @@ function extractArray(text) {
 // ─── Prompt Mundial ──────────────────────────────────────────────────────────
 function buildMundialPrompt(matches) {
   const today = new Date().toISOString().split("T")[0];
-  return `Eres un analista profesional de apuestas de fútbol. Hoy es ${today}.
-
-Analiza estos partidos del Mundial 2026 y entrega EXACTAMENTE 2 picks por partido en mercados DISTINTOS. NO uses solo "quién gana". Prioriza mercados con valor analítico real.
-
-MERCADOS disponibles (elige los 3 con más respaldo para cada partido):
-- Handicap asiático
-- Total de goles Over/Under
-- Resultado al descanso
-- Primer tiempo Over/Under
-- Ambos equipos anotan Sí/No
-- Corners Over/Under
-- Tarjetas Over/Under
-- Ganador (solo si hay ventaja táctica muy clara)
-
-Partidos:
-${JSON.stringify(matches, null, 2)}
-
-Devuelve SOLO JSON válido sin markdown:
-{"analyses":[{"match":"A vs B","meta":"Fecha · Sede · Ronda","context":"contexto clave en 1 oración","picks":[{"market":"mercado","selection":"apuesta exacta","odds_estimate":"1.75","confidence":74,"reasoning":"2-3 oraciones con respaldo táctico específico","edge":"ventaja analítica en 1 frase"},{"market":"segundo mercado","selection":"apuesta","odds_estimate":"1.90","confidence":68,"reasoning":"razonamiento","edge":"edge"}],"risk":"riesgo principal en 1 oración"}]}`;
+  // Versión compacta de los partidos para no exceder TPM de Groq
+  const compactMatches = matches.map(m => ({
+    m: m.match,
+    d: m.date,
+    v: m.venue ? m.venue.substring(0, 40) : "",
+    r: m.round ? m.round.substring(0, 30) : "",
+  }));
+  return `Analista apuestas fútbol. Hoy: ${today}. Mundial 2026.
+2 picks por partido, mercados distintos. No solo ganador.
+Mercados: handicap asiático, over/under goles, resultado HT, ambos anotan, corners, tarjetas.
+Partidos: ${JSON.stringify(compactMatches)}
+JSON: {"analyses":[{"match":"A vs B","meta":"info","context":"1 frase","picks":[{"market":"m","selection":"s","odds_estimate":"1.75","confidence":74,"reasoning":"2 frases","edge":"1 frase"},{"market":"m2","selection":"s2","odds_estimate":"1.90","confidence":68,"reasoning":"2 frases","edge":"1 frase"}],"risk":"1 frase"}]}`;
 }
 
 // ─── Prompt UFC ──────────────────────────────────────────────────────────────

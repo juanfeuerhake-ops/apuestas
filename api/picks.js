@@ -204,7 +204,7 @@ function buildMundialPrompt(matches) {
   const today = new Date().toISOString().split("T")[0];
   return `Eres un analista profesional de apuestas de fútbol. Hoy es ${today}.
 
-Analiza estos partidos del Mundial 2026 y entrega EXACTAMENTE 3 picks por partido en mercados DISTINTOS. NO uses solo "quién gana". Prioriza mercados con valor analítico real.
+Analiza estos partidos del Mundial 2026 y entrega EXACTAMENTE 2 picks por partido en mercados DISTINTOS. NO uses solo "quién gana". Prioriza mercados con valor analítico real.
 
 MERCADOS disponibles (elige los 3 con más respaldo para cada partido):
 - Handicap asiático
@@ -220,7 +220,7 @@ Partidos:
 ${JSON.stringify(matches, null, 2)}
 
 Devuelve SOLO JSON válido sin markdown:
-{"analyses":[{"match":"A vs B","meta":"Fecha · Sede · Ronda","context":"contexto clave en 1 oración","picks":[{"market":"mercado","selection":"apuesta exacta","odds_estimate":"1.75","confidence":74,"reasoning":"2-3 oraciones con respaldo táctico específico","edge":"ventaja analítica en 1 frase"},{"market":"segundo mercado","selection":"apuesta","odds_estimate":"1.90","confidence":68,"reasoning":"razonamiento","edge":"edge"},{"market":"tercer mercado","selection":"apuesta","odds_estimate":"2.10","confidence":63,"reasoning":"razonamiento","edge":"edge"}],"risk":"riesgo principal en 1 oración"}]}`;
+{"analyses":[{"match":"A vs B","meta":"Fecha · Sede · Ronda","context":"contexto clave en 1 oración","picks":[{"market":"mercado","selection":"apuesta exacta","odds_estimate":"1.75","confidence":74,"reasoning":"2-3 oraciones con respaldo táctico específico","edge":"ventaja analítica en 1 frase"},{"market":"segundo mercado","selection":"apuesta","odds_estimate":"1.90","confidence":68,"reasoning":"razonamiento","edge":"edge"}],"risk":"riesgo principal en 1 oración"}]}`;
 }
 
 // ─── Prompt UFC ──────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ function buildUFCPrompt() {
   const today = new Date().toISOString().split("T")[0];
   return `Eres un analista profesional de MMA y apuestas. Hoy es ${today}.
 
-Busca el cartel de UFC más próximo (este fin de semana o próximos 7 días). Para el main event y 3-4 peleas importantes, entrega EXACTAMENTE 3 picks por pelea en mercados DISTINTOS.
+Busca el cartel de UFC más próximo (este fin de semana o próximos 7 días). Para el main event y 3-4 peleas importantes, entrega EXACTAMENTE 2 picks por pelea en mercados DISTINTOS.
 
 MERCADOS disponibles (elige los 3 con más respaldo):
 - Método de victoria: KO/TKO, Sumisión, Decisión unánime, Decisión dividida
@@ -239,5 +239,5 @@ MERCADOS disponibles (elige los 3 con más respaldo):
 - Knockdown en la pelea Sí/No
 
 Devuelve SOLO JSON válido sin markdown:
-{"fights":[{"fight":"A vs B","title":null,"weight_class":"división","event":"UFC XXX","date":"YYYY-MM-DD","venue":"Sede, Ciudad","context":"contexto en 1 oración","picks":[{"market":"mercado","selection":"apuesta exacta","odds_estimate":"1.85","confidence":76,"reasoning":"2-3 oraciones con métricas reales","edge":"ventaja analítica en 1 frase"},{"market":"segundo mercado","selection":"apuesta","odds_estimate":"1.65","confidence":71,"reasoning":"razonamiento","edge":"edge"},{"market":"tercer mercado","selection":"apuesta","odds_estimate":"2.20","confidence":65,"reasoning":"razonamiento","edge":"edge"}],"risk":"riesgo principal en 1 oración"}]}`;
+{"fights":[{"fight":"A vs B","title":null,"weight_class":"división","event":"UFC XXX","date":"YYYY-MM-DD","venue":"Sede, Ciudad","context":"contexto en 1 oración","picks":[{"market":"mercado","selection":"apuesta exacta","odds_estimate":"1.85","confidence":76,"reasoning":"2-3 oraciones con métricas reales","edge":"ventaja analítica en 1 frase"},{"market":"segundo mercado","selection":"apuesta","odds_estimate":"1.65","confidence":71,"reasoning":"razonamiento","edge":"edge"}],"risk":"riesgo principal en 1 oración"}]}`;
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scanner de Picks · Mundial 2026 & UFC</title>
+<title>Scanner de Picks · Mundial 2026, UFC & Tenis</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
@@ -22,6 +22,7 @@
   --accent:#d8ff5e;--accent-dim:#9bb84a;--accent-bg:rgba(216,255,94,0.06);
   --red:#ff6b5e;--amber:#ffb454;--green:#6ee7a3;--blue:#7eb8ff;
   --ufc:#ff3d00;--ufc-dim:#c43000;--ufc-bg:rgba(255,61,0,0.06);
+  --tenis:#a78bfa;--tenis-dim:#7c5cbf;--tenis-bg:rgba(167,139,250,0.06);
   --font-display:'Fraunces',Georgia,serif;
   --font-body:'Inter',system-ui,sans-serif;
   --font-mono:'IBM Plex Mono',monospace;
@@ -30,87 +31,91 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.5;padding-bottom:80px;}
 
-/* ── Header ── */
 header{padding:28px 20px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10;backdrop-filter:blur(8px);}
 .header-inner{max-width:780px;margin:0 auto;}
 .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
 h1{font-family:var(--font-display);font-size:32px;font-weight:600;letter-spacing:-.01em;}
 .subtitle{color:var(--muted);font-size:14px;margin-top:6px;max-width:520px;}
 
-/* ── Disclaimer ── */
 .disclaimer{max-width:780px;margin:18px auto 0;padding:14px 16px;background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:var(--r);font-size:13px;color:var(--muted);}
 .disclaimer strong{color:var(--text);}
 
 /* ── Tabs ── */
-.tabs{display:flex;gap:8px;max-width:780px;margin:20px auto 0;padding:0 20px;}
-.tab-btn{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;padding:8px 16px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);cursor:pointer;transition:all .15s;}
+.tabs{display:flex;gap:6px;max-width:780px;margin:20px auto 0;padding:0 20px;flex-wrap:wrap;}
+.tab-btn{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);cursor:pointer;transition:all .15s;}
 .tab-btn:hover{color:var(--text);border-color:var(--line-2);}
 .tab-btn.active-mundial{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);}
 .tab-btn.active-ufc{background:var(--ufc-bg);border-color:var(--ufc);color:var(--ufc);}
+.tab-btn.active-tenis{background:var(--tenis-bg);border-color:var(--tenis);color:var(--tenis);}
 
-/* ── Refresh ── */
 .refresh-bar{max-width:780px;margin:0 auto;padding:14px 20px 0;display:flex;justify-content:flex-end;}
 .refresh-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:8px 14px;border-radius:6px;cursor:pointer;transition:all .15s;}
 .refresh-btn:hover{border-color:var(--line-2);color:var(--text);}
 
-/* ── Main ── */
 main{max-width:780px;margin:0 auto;padding:24px 20px 0;}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
 
-/* ── Section label ── */
 .section-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);margin:32px 0 16px;display:flex;align-items:center;gap:10px;}
 .section-label::after{content:'';flex:1;height:1px;background:var(--line);}
 .section-label:first-of-type{margin-top:0;}
 .section-label.ufc{color:var(--ufc-dim);}
 .section-label.ufc::after{background:rgba(255,61,0,.2);}
+.section-label.tenis{color:var(--tenis-dim);}
+.section-label.tenis::after{background:rgba(167,139,250,.2);}
 
-/* ── Card ── */
+/* ── Cards ── */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden;}
 .card.ufc-card{border-color:rgba(255,61,0,.18);}
 .card.ufc-main{border-color:rgba(255,61,0,.4);background:linear-gradient(160deg,var(--panel) 60%,#1a1108 100%);}
+.card.tenis-card{border-color:rgba(167,139,250,.18);}
+.card.tenis-grand-slam{border-color:rgba(167,139,250,.45);background:linear-gradient(160deg,var(--panel) 60%,#130f1f 100%);}
 
-/* ── Card header ── */
 .card-header{padding:20px 20px 16px;}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;}
 .match-name{font-family:var(--font-display);font-size:21px;font-weight:600;line-height:1.25;}
 .match-meta{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;}
 .title-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:3px 9px;border-radius:4px;background:rgba(255,180,84,.12);color:var(--amber);border:1px solid rgba(255,180,84,.25);margin-top:6px;}
+.tenis-badge{background:rgba(167,139,250,.12);color:var(--tenis);border-color:rgba(167,139,250,.25);}
 .context-line{font-size:13px;color:var(--muted);line-height:1.5;padding:10px 12px;background:var(--panel-2);border-radius:6px;border-left:2px solid var(--line-2);}
-.context-line.ufc-context{border-left-color:rgba(255,61,0,.3);}
+.context-line.ufc{border-left-color:rgba(255,61,0,.3);}
+.context-line.tenis{border-left-color:rgba(167,139,250,.3);}
 
-/* ── Picks dentro de la card ── */
 .picks-list{border-top:1px solid var(--line);padding:4px 0;}
 .pick-item{padding:16px 20px;border-bottom:1px solid var(--line);}
 .pick-item:last-child{border-bottom:none;}
 .pick-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;}
-.pick-left{}
 .pick-market-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent-dim);margin-bottom:3px;}
 .pick-market-label.ufc{color:var(--ufc-dim);}
+.pick-market-label.tenis{color:var(--tenis-dim);}
 .pick-selection{font-size:15px;font-weight:600;line-height:1.3;}
 .pick-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
 .pick-odds{font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--accent);background:var(--accent-bg);border:1px solid rgba(216,255,94,.2);border-radius:6px;padding:4px 11px;}
 .pick-odds.ufc{color:var(--ufc);background:var(--ufc-bg);border-color:rgba(255,61,0,.2);}
+.pick-odds.tenis{color:var(--tenis);background:var(--tenis-bg);border-color:rgba(167,139,250,.2);}
 .conf-pill{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:4px;}
 .conf-high{background:rgba(110,231,163,.1);color:var(--green);border:1px solid rgba(110,231,163,.2);}
 .conf-mid{background:rgba(255,180,84,.1);color:var(--amber);border:1px solid rgba(255,180,84,.2);}
 .conf-low{background:rgba(255,107,94,.1);color:var(--red);border:1px solid rgba(255,107,94,.2);}
 
-/* ── Reasoning ── */
 .reasoning-block{background:var(--panel-3);border-radius:7px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
 .reasoning-text{font-size:13px;color:var(--muted);line-height:1.55;}
 .edge-line{display:flex;align-items:flex-start;gap:8px;font-size:12px;padding-top:8px;border-top:1px solid var(--line);}
 .edge-tag{font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:2px 7px;border-radius:3px;background:rgba(126,184,255,.1);color:var(--blue);border:1px solid rgba(126,184,255,.2);flex-shrink:0;margin-top:1px;}
 .edge-text{font-size:12px;color:var(--blue);line-height:1.4;}
 
-/* ── Risk ── */
 .card-risk{padding:12px 20px;background:rgba(255,107,94,.05);border-top:1px solid rgba(255,107,94,.15);display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--red);}
 .card-risk::before{content:'⚠';flex-shrink:0;}
 
-/* ── States ── */
+.tournament-banner{background:var(--tenis-bg);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px;}
+.tournament-banner .t-icon{font-size:20px;}
+.tournament-banner .t-name{font-weight:600;color:var(--tenis);}
+.tournament-banner .t-tier{font-family:var(--font-mono);font-size:10px;color:var(--tenis-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+
 .state-box{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px;}
 .spinner{width:22px;height:22px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto 16px;animation:spin .8s linear infinite;}
 .spinner.ufc{border-top-color:var(--ufc);}
+.spinner.tenis{border-top-color:var(--tenis);}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 footer{max-width:780px;margin:40px auto 0;padding:0 20px;font-size:12px;color:var(--muted-2);text-align:center;line-height:1.8;}
@@ -119,6 +124,8 @@ footer{max-width:780px;margin:40px auto 0;padding:0 20px;font-size:12px;color:va
   h1{font-size:26px;}
   .match-name{font-size:18px;}
   .pick-selection{font-size:14px;}
+  .tabs{gap:4px;}
+  .tab-btn{font-size:10px;padding:7px 10px;}
 }
 </style>
 </head>
@@ -128,17 +135,18 @@ footer{max-width:780px;margin:40px auto 0;padding:0 20px;font-size:12px;color:va
   <div class="header-inner">
     <div class="eyebrow">Scanner de picks · No es garantía</div>
     <h1>¿Qué apostar hoy?</h1>
-    <p class="subtitle">Picks con análisis profesional para el Mundial 2026 y UFC. Mercados alternativos, razonamiento táctico y edge analítico.</p>
+    <p class="subtitle">Picks con análisis profesional para el Mundial 2026, UFC y Tenis. Mercados alternativos, razonamiento táctico y edge analítico.</p>
   </div>
 </header>
 
 <div class="disclaimer">
-  <strong>Esto no es una garantía.</strong> El índice de confianza refleja la solidez del respaldo analítico, no la probabilidad real. Las cuotas son estimaciones orientativas. Verifica siempre en tu casa de apuestas antes de apostar. Juega con responsabilidad.
+  <strong>Esto no es una garantía.</strong> El índice de confianza refleja la solidez del respaldo analítico, no la probabilidad real. Las cuotas son estimaciones orientativas. Verifica siempre en tu casa de apuestas. Juega con responsabilidad.
 </div>
 
 <div class="tabs">
   <button class="tab-btn active-mundial" onclick="switchTab('mundial')">⚽ Mundial 2026</button>
-  <button class="tab-btn" onclick="switchTab('ufc')">🥊 UFC este fin de semana</button>
+  <button class="tab-btn" onclick="switchTab('ufc')">🥊 UFC</button>
+  <button class="tab-btn" onclick="switchTab('tenis')">🎾 Tenis</button>
 </div>
 
 <div class="refresh-bar">
@@ -148,23 +156,23 @@ footer{max-width:780px;margin:40px auto 0;padding:0 20px;font-size:12px;color:va
 <main>
   <div id="tab-mundial" class="tab-panel active">
     <div class="section-label">Próximas 48 horas · Mundial 2026</div>
-    <div id="content-mundial">
-      <div class="state-box"><div class="spinner"></div>Cargando partidos y generando análisis...</div>
-    </div>
+    <div id="content-mundial"><div class="state-box"><div class="spinner"></div>Cargando partidos...</div></div>
   </div>
 
   <div id="tab-ufc" class="tab-panel">
     <div class="section-label ufc">Este fin de semana · UFC</div>
-    <div id="content-ufc">
-      <div class="state-box"><div class="spinner ufc"></div>Buscando cartel de UFC y generando análisis...</div>
-    </div>
+    <div id="content-ufc"><div class="state-box"><div class="spinner ufc"></div>Buscando cartel de UFC...</div></div>
+  </div>
+
+  <div id="tab-tenis" class="tab-panel">
+    <div class="section-label tenis">Hoy · Tenis</div>
+    <div id="content-tenis"><div class="state-box"><div class="spinner tenis"></div>Cargando partidos de tenis...</div></div>
   </div>
 </main>
 
 <footer>
   Índice de confianza = solidez del respaldo analítico, no probabilidad estadística real.<br>
-  Mundial: datos de fixtures.json · análisis se refresca cada 24h · vía Groq (Llama 3.3)<br>
-  UFC: cartel obtenido en tiempo real · análisis se refresca cada 7 días · vía Gemini 2.5
+  Mundial: ESPN · refresca cada 24h · Groq &nbsp;|&nbsp; UFC: Gemini 2.5 · refresca cada semana &nbsp;|&nbsp; Tenis: ESPN · refresca cada 12h · Groq
 </footer>
 
 <script>
@@ -172,24 +180,26 @@ let currentTab = 'mundial';
 
 function switchTab(tab) {
   currentTab = tab;
-  document.getElementById('tab-mundial').classList.toggle('active', tab === 'mundial');
-  document.getElementById('tab-ufc').classList.toggle('active', tab === 'ufc');
+  ['mundial','ufc','tenis'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
   const btns = document.querySelectorAll('.tab-btn');
   btns[0].className = 'tab-btn' + (tab === 'mundial' ? ' active-mundial' : '');
   btns[1].className = 'tab-btn' + (tab === 'ufc' ? ' active-ufc' : '');
+  btns[2].className = 'tab-btn' + (tab === 'tenis' ? ' active-tenis' : '');
 }
 
 async function loadAll() {
   document.getElementById('content-mundial').innerHTML = `<div class="state-box"><div class="spinner"></div>Analizando partidos del Mundial...</div>`;
-  document.getElementById('content-ufc').innerHTML = `<div class="state-box"><div class="spinner ufc"></div>Buscando cartel de UFC y generando análisis...</div>`;
+  document.getElementById('content-ufc').innerHTML = `<div class="state-box"><div class="spinner ufc"></div>Buscando cartel de UFC...</div>`;
+  document.getElementById('content-tenis').innerHTML = `<div class="state-box"><div class="spinner tenis"></div>Cargando partidos de tenis...</div>`;
 
   try {
     const res = await fetch('/api/picks');
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      const msg = `<div class="state-box">⚠ Error del servidor (${res.status}): ${esc(errData.error || 'Error desconocido')}</div>`;
-      document.getElementById('content-mundial').innerHTML = msg;
-      document.getElementById('content-ufc').innerHTML = msg;
+      const err = await res.json().catch(() => ({}));
+      const msg = `<div class="state-box">⚠ Error (${res.status}): ${esc(err.error || 'Error desconocido')}</div>`;
+      ['mundial','ufc','tenis'].forEach(t => document.getElementById(`content-${t}`).innerHTML = msg);
       return;
     }
 
@@ -199,10 +209,10 @@ async function loadAll() {
     const mundialEl = document.getElementById('content-mundial');
     const mundial = data.mundial || {};
     if (!mundial.picks || mundial.picks.length === 0) {
-      mundialEl.innerHTML = `<div class="state-box">${esc(mundial.message || 'No hay partidos programados.')}</div>`;
+      mundialEl.innerHTML = `<div class="state-box">${esc(mundial.message || 'No hay partidos.')}</div>`;
     } else {
       mundialEl.innerHTML = '';
-      mundial.picks.forEach(p => mundialEl.appendChild(renderMundial(p)));
+      mundial.picks.forEach(p => mundialEl.appendChild(renderCard(p, 'mundial')));
     }
 
     // ── UFC ──
@@ -215,16 +225,35 @@ async function loadAll() {
       ufc.fights.forEach((f, i) => ufcEl.appendChild(renderUFC(f, i === 0)));
     }
 
+    // ── Tenis ──
+    const tenisEl = document.getElementById('content-tenis');
+    const tenis = data.tenis || {};
+    if (!tenis.picks || tenis.picks.length === 0) {
+      tenisEl.innerHTML = `<div class="state-box">${esc(tenis.message || 'No se encontraron partidos de tenis.')}</div>`;
+    } else {
+      tenisEl.innerHTML = '';
+      // Banner del torneo
+      if (tenis.tournament) {
+        const tierLabel = tenis.tier === 'grandslam' ? 'Grand Slam' : tenis.tier === 'masters1000' ? 'Masters 1000' : 'ATP / WTA';
+        const tierIcon = tenis.tier === 'grandslam' ? '🏆' : tenis.tier === 'masters1000' ? '⭐' : '🎾';
+        const banner = document.createElement('div');
+        banner.className = 'tournament-banner';
+        banner.innerHTML = `<span class="t-icon">${tierIcon}</span><div><div class="t-name">${esc(tenis.tournament)}</div><div class="t-tier">${tierLabel}</div></div>`;
+        tenisEl.appendChild(banner);
+      }
+      tenis.picks.forEach(p => tenisEl.appendChild(renderCard(p, 'tenis')));
+    }
+
   } catch (err) {
     const msg = `<div class="state-box">⚠ No se pudo conectar. ${esc(err.message)}</div>`;
-    document.getElementById('content-mundial').innerHTML = msg;
-    document.getElementById('content-ufc').innerHTML = msg;
+    ['mundial','ufc','tenis'].forEach(t => document.getElementById(`content-${t}`).innerHTML = msg);
   }
 }
 
-function renderMundial(p) {
+function renderCard(p, sport) {
   const card = document.createElement('div');
-  card.className = 'card';
+  const isGrandSlam = sport === 'tenis' && p.tier === 'grandslam';
+  card.className = `card${sport === 'tenis' ? (isGrandSlam ? ' tenis-grand-slam' : ' tenis-card') : ''}`;
 
   let html = `<div class="card-header">
     <div class="card-top">
@@ -233,7 +262,7 @@ function renderMundial(p) {
         <div class="match-meta">${esc(p.meta || '')}</div>
       </div>
     </div>
-    ${p.context ? `<div class="context-line">${esc(p.context)}</div>` : ''}
+    ${p.context ? `<div class="context-line ${sport}">${esc(p.context)}</div>` : ''}
   </div>`;
 
   if (Array.isArray(p.picks) && p.picks.length > 0) {
@@ -241,16 +270,16 @@ function renderMundial(p) {
     p.picks.forEach(pick => {
       const conf = pick.confidence || 50;
       const confClass = conf >= 70 ? 'conf-high' : conf >= 50 ? 'conf-mid' : 'conf-low';
-      const confLabel = conf >= 70 ? `Alto · ${conf}` : conf >= 50 ? `Medio · ${conf}` : `Bajo · ${conf}`;
+      const confLabel = `${conf >= 70 ? 'Alto' : conf >= 50 ? 'Medio' : 'Bajo'} · ${conf}`;
       html += `
         <div class="pick-item">
           <div class="pick-top">
-            <div class="pick-left">
-              <div class="pick-market-label">${esc(pick.market || '')}</div>
+            <div>
+              <div class="pick-market-label ${sport}">${esc(pick.market || '')}</div>
               <div class="pick-selection">${esc(pick.selection || '')}</div>
             </div>
             <div class="pick-right">
-              <div class="pick-odds">~${esc(pick.odds_estimate || '—')}</div>
+              <div class="pick-odds ${sport}">~${esc(pick.odds_estimate || '—')}</div>
               <div class="conf-pill ${confClass}">${confLabel}</div>
             </div>
           </div>
@@ -264,15 +293,13 @@ function renderMundial(p) {
   }
 
   if (p.risk) html += `<div class="card-risk">${esc(p.risk)}</div>`;
-
   card.innerHTML = html;
   return card;
 }
 
 function renderUFC(f, isMain) {
   const card = document.createElement('div');
-  card.className = 'card ufc-card' + (isMain ? ' ufc-main' : '');
-
+  card.className = `card ufc-card${isMain ? ' ufc-main' : ''}`;
   const meta = [f.weight_class, f.event, f.date, f.venue].filter(Boolean).join(' · ');
 
   let html = `<div class="card-header">
@@ -283,7 +310,7 @@ function renderUFC(f, isMain) {
         <div class="match-meta" style="margin-top:6px">${esc(meta)}</div>
       </div>
     </div>
-    ${f.context ? `<div class="context-line ufc-context">${esc(f.context)}</div>` : ''}
+    ${f.context ? `<div class="context-line ufc">${esc(f.context)}</div>` : ''}
   </div>`;
 
   if (Array.isArray(f.picks) && f.picks.length > 0) {
@@ -291,17 +318,16 @@ function renderUFC(f, isMain) {
     f.picks.forEach(pick => {
       const conf = pick.confidence || 50;
       const confClass = conf >= 70 ? 'conf-high' : conf >= 50 ? 'conf-mid' : 'conf-low';
-      const confLabel = conf >= 70 ? `Alto · ${conf}` : conf >= 50 ? `Medio · ${conf}` : `Bajo · ${conf}`;
       html += `
         <div class="pick-item">
           <div class="pick-top">
-            <div class="pick-left">
+            <div>
               <div class="pick-market-label ufc">${esc(pick.market || '')}</div>
               <div class="pick-selection">${esc(pick.selection || '')}</div>
             </div>
             <div class="pick-right">
               <div class="pick-odds ufc">~${esc(pick.odds_estimate || '—')}</div>
-              <div class="conf-pill ${confClass}">${confLabel}</div>
+              <div class="conf-pill ${confClass}">${conf >= 70 ? 'Alto' : conf >= 50 ? 'Medio' : 'Bajo'} · ${conf}</div>
             </div>
           </div>
           <div class="reasoning-block">
@@ -314,7 +340,6 @@ function renderUFC(f, isMain) {
   }
 
   if (f.risk) html += `<div class="card-risk">${esc(f.risk)}</div>`;
-
   card.innerHTML = html;
   return card;
 }
@@ -325,10 +350,7 @@ function esc(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
-
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 loadAll();
 </script>
 </body>

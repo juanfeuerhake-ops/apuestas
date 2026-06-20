@@ -106,18 +106,21 @@ export default async function handler(req, res) {
       tenisPicks = cachedTenis;
     } else {
       const { matches: tenisMatches, tournament, tier } = await fetchESPNTenis();
-      if (tenisMatches.length === 0) {
-        tenisPicks = { picks: [], message: "No se encontraron partidos de tenis para hoy." };
+      let tenisText;
+      if (tenisMatches.length > 0) {
+        // ESPN devolvió partidos — analizar con Groq
+        tenisText = await callGroq(GROQ_KEY, buildTenisPrompt(tenisMatches, tournament, tier));
       } else {
-        const text = await callGroq(GROQ_KEY, buildTenisPrompt(tenisMatches, tournament, tier));
-        const arr = extractArray(text);
-        if (arr && arr.length > 0) {
-          tenisPicks = { picks: arr, tournament, tier, updated: new Date().toISOString().split("T")[0] };
-          cachedTenis = tenisPicks;
-          cacheTenisTimestamp = now;
-        } else {
-          tenisPicks = { picks: [], message: "La IA no pudo analizar los partidos de tenis." };
-        }
+        // ESPN no tiene datos — usar Gemini para buscar y analizar
+        tenisText = await callGemini(GEMINI_KEY, buildTenisGeminiPrompt());
+      }
+      const arr = extractArray(tenisText);
+      if (arr && arr.length > 0) {
+        tenisPicks = { picks: arr, tournament: tournament || "ATP / WTA", tier, updated: new Date().toISOString().split("T")[0] };
+        cachedTenis = tenisPicks;
+        cacheTenisTimestamp = now;
+      } else {
+        tenisPicks = { picks: [], message: "La IA no pudo analizar los partidos de tenis." };
       }
     }
   } catch (err) {
@@ -176,22 +179,33 @@ async function fetchESPNMatches() {
   return matches;
 }
 
-// ─── ESPN Tenis ───────────────────────────────────────────────────────────────
+// ─── Tenis — wtatennis.com + atptour scraping via livescore API ───────────────
 async function fetchESPNTenis() {
-  const tours = ["atp", "wta"];
   const allMatches = [];
   let detectedTournament = "";
-  let detectedTier = "other"; // "grandslam" | "masters1000" | "other"
+  let detectedTier = "other";
 
-  for (const tour of tours) {
+  // Intentar múltiples endpoints de ESPN para tenis
+  const endpoints = [
+    "https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard",
+    "https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard",
+    "https://site.api.espn.com/apis/site/v2/sports/tennis/atp-singles/scoreboard",
+    "https://site.api.espn.com/apis/site/v2/sports/tennis/wta-singles/scoreboard",
+    "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=tennis&league=atp",
+    "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=tennis&league=wta",
+  ];
+
+  for (const endpoint of endpoints) {
     try {
-      const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/tennis/${tour}/scoreboard`, {
-        headers: { "User-Agent": "Mozilla/5.0" }
-      });
+      const r = await fetch(endpoint, { headers: { "User-Agent": "Mozilla/5.0" } });
       if (!r.ok) continue;
       const data = await r.json();
+      const events = data.events || data.sports?.[0]?.leagues?.[0]?.events || [];
+      if (events.length === 0) continue;
 
-      for (const event of (data.events || [])) {
+      const tour = endpoint.includes("wta") ? "WTA" : "ATP";
+
+      for (const event of events) {
         const comp = event.competitions?.[0];
         if (!comp) continue;
         const players = comp.competitors || [];
@@ -202,61 +216,44 @@ async function fetchESPNTenis() {
         const tournamentName = event.season?.slug || event.name || data.leagues?.[0]?.name || "";
         const nameLower = tournamentName.toLowerCase();
 
-        // Detectar tier del torneo
         let tier = "other";
         if (GRAND_SLAMS.some(gs => nameLower.includes(gs))) tier = "grandslam";
         else if (MASTERS_1000.some(m => nameLower.includes(m))) tier = "masters1000";
 
-        // Ranking si está disponible
-        const p1Rank = players[0]?.athlete?.rank || players[0]?.rank || null;
-        const p2Rank = players[1]?.athlete?.rank || players[1]?.rank || null;
+        const p1Rank = players[0]?.athlete?.rank || null;
+        const p2Rank = players[1]?.athlete?.rank || null;
         const round = comp.notes?.[0]?.headline || event.shortName || "";
         const status = event.status?.type?.description || "";
-
-        // Solo partidos no terminados
         if (status === "Final" || status === "Postponed") continue;
 
-        allMatches.push({
-          match: `${p1} vs ${p2}`,
-          p1, p2,
-          p1Rank, p2Rank,
-          tournament: tournamentName,
-          tour: tour.toUpperCase(),
-          round,
-          tier,
-          status,
-        });
+        allMatches.push({ match: `${p1} vs ${p2}`, p1, p2, p1Rank, p2Rank, tournament: tournamentName, tour, round, tier, status });
 
         if (!detectedTournament && tournamentName) detectedTournament = tournamentName;
         if (tier === "grandslam") detectedTier = "grandslam";
         else if (tier === "masters1000" && detectedTier !== "grandslam") detectedTier = "masters1000";
       }
-    } catch (e) { console.warn(`ESPN tenis ${tour} error:`, e.message); }
+      if (allMatches.length > 0) break; // endpoint funcionó, no seguir
+    } catch (e) {
+      console.warn("Tenis endpoint error:", e.message);
+    }
+  }
+
+  // Si ESPN no devuelve nada, usar Gemini para obtener partidos del día
+  if (allMatches.length === 0) {
+    return { matches: [], tournament: "", tier: "other" };
   }
 
   // Filtrar por jerarquía
   let filtered = allMatches;
-  if (detectedTier === "grandslam") {
-    filtered = allMatches.filter(m => m.tier === "grandslam");
-  } else if (detectedTier === "masters1000") {
-    filtered = allMatches.filter(m => m.tier === "masters1000");
-  } else {
-    // Sin Grand Slam ni Masters: top 5 con mejores oportunidades
-    // Priorizar partidos con rankings conocidos y cercanos
+  if (detectedTier === "grandslam") filtered = allMatches.filter(m => m.tier === "grandslam");
+  else if (detectedTier === "masters1000") filtered = allMatches.filter(m => m.tier === "masters1000");
+  else {
     filtered = allMatches
-      .sort((a, b) => {
-        const aHasRank = (a.p1Rank && a.p2Rank) ? 1 : 0;
-        const bHasRank = (b.p1Rank && b.p2Rank) ? 1 : 0;
-        return bHasRank - aHasRank;
-      })
+      .sort((a, b) => ((a.p1Rank && a.p2Rank) ? -1 : 1))
       .slice(0, 5);
   }
 
-  return {
-    matches: filtered.slice(0, 8), // máx 8 para no saturar Groq
-    tournament: detectedTournament,
-    tier: detectedTier,
-  };
+  return { matches: filtered.slice(0, 6), tournament: detectedTournament, tier: detectedTier };
 }
 
 // ─── Groq ─────────────────────────────────────────────────────────────────────
@@ -348,6 +345,21 @@ Mercados: método de victoria (KO/TKO/Sumisión/Decisión), over/under rounds, l
 JSON: {"fights":[{"fight":"A vs B","title":null,"weight_class":"división","event":"UFC XXX","date":"YYYY-MM-DD","venue":"Sede, Ciudad","context":"1 frase","picks":[{"market":"m","selection":"s","odds_estimate":"1.85","confidence":76,"reasoning":"2 frases","edge":"1 frase"},{"market":"m2","selection":"s2","odds_estimate":"1.65","confidence":71,"reasoning":"2 frases","edge":"1 frase"}],"risk":"1 frase"}]}`;
 }
 
+// ─── Prompt Tenis via Gemini (cuando ESPN no tiene datos) ────────────────────
+function buildTenisGeminiPrompt() {
+  const today = new Date().toISOString().split("T")[0];
+  return `Eres un analista profesional de tenis y apuestas. Hoy es ${today}.
+
+Busca los partidos de tenis más importantes que se juegan HOY. Prioridad: Grand Slam > Masters 1000 > ATP 500 > WTA > otros. Si hay Grand Slam o Masters 1000 en curso, muestra solo esos. Si no, los 5 partidos con mejores oportunidades de apuesta del día.
+
+Para cada partido entrega 2 picks en mercados DISTINTOS al ganador simple.
+Mercados: ganador primer set, total games over/under, llega al tercer set Sí/No, total sets over/under, handicap games.
+
+Devuelve SOLO JSON válido:
+{"analyses":[{"match":"A vs B","meta":"Torneo · Ronda · ATP/WTA","context":"1 frase sobre el partido","picks":[{"market":"m","selection":"s","odds_estimate":"1.75","confidence":72,"reasoning":"2 frases con respaldo","edge":"1 frase"},{"market":"m2","selection":"s2","odds_estimate":"1.90","confidence":65,"reasoning":"2 frases","edge":"1 frase"}],"risk":"1 frase"}]}`;
+}
+
+// ─── Prompt Tenis via Groq (cuando ESPN tiene datos) ──────────────────────────
 // ─── Prompt Tenis ─────────────────────────────────────────────────────────────
 function buildTenisPrompt(matches, tournament, tier) {
   const today = new Date().toISOString().split("T")[0];
